@@ -174,3 +174,31 @@ uv run python -m server.app --wav tests/data/speech_ru.wav --realtime --threshol
 ```bash
 uv run pytest tests/test_server.py
 ```
+
+## S8: стенд оценки
+
+`src/qat/eval/metrics.py` — FRR, FA/h, DET-кривая, выбор рабочего порога (самый низкий порог с
+FA/h ≤ 0,1). `src/qat/eval/bench.py` — прогон любого `Detector` по манифесту через тот же конвейер,
+что и в живом режиме; пороги перебираются на сохранённых оценках постобработкой S5.
+
+Манифест — JSONL, пути относительно манифеста:
+
+```json
+{"path": "pos/001.wav", "label": "positive", "condition": "noise", "target_start_sec": 1.2, "target_end_sec": 2.0}
+{"path": "neg/stream_01.wav", "label": "negative"}
+```
+
+Позитив засчитан, если тревога была от начала цели до её конца + 1 с. FRR считается и по
+условиям (`condition`). Если негативного потока меньше 10 ч, в отчёте будет предупреждение:
+FA/h ≤ 0,1 на таком объёме не подтвердить.
+
+```bash
+uv run python -m qat.eval.bench --manifest manifest.jsonl --detector energy --out reports/energy
+```
+
+Результат: `report.json` (рабочий порог, FRR по условиям, вся DET-кривая, предупреждения) и
+`det.csv`. Флаг `--no-wake` оценивает детектор без пробуждения.
+
+```bash
+uv run pytest tests/test_eval_metrics.py tests/test_eval_bench.py
+```
