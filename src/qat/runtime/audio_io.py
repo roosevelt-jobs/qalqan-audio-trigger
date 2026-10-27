@@ -4,12 +4,20 @@
 shape (block_size,), sample_rate 16000, значения в [-1, 1].
 """
 
+import argparse
+import logging
+import queue
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Protocol
 
 import numpy as np
+import sounddevice as sd
 import soundfile as sf
+
+from qat.logging_setup import setup_logging
+
+logger = logging.getLogger(__name__)
 
 SAMPLE_RATE = 16000
 BLOCK_SIZE = 480  # 30 мс
@@ -54,3 +62,70 @@ class WavReplaySource:
         )
         for block in blocks:
             yield _to_mono(block)
+
+
+class MicrophoneSource:
+    """Захват с микрофона. Использовать как контекстный менеджер:
+
+        with MicrophoneSource() as mic:
+            for block in mic: ...
+    """
+
+    def __init__(self, block_size: int = BLOCK_SIZE, device: int | str | None = None):
+        self.sample_rate = SAMPLE_RATE
+        self.block_size = block_size
+        self._queue: queue.Queue[np.ndarray] = queue.Queue()
+        self._stream = sd.InputStream(
+            samplerate=SAMPLE_RATE,
+            blocksize=block_size,
+            device=device,
+            channels=1,
+            dtype="float32",
+            callback=self._callback,
+        )
+
+    def _callback(self, indata: np.ndarray, frames: int, time, status) -> None:
+        if status:
+            logger.warning("микрофон: %s", status)
+        self._queue.put(_to_mono(indata.copy()))
+
+    def __enter__(self) -> "MicrophoneSource":
+        self._stream.start()
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self._stream.stop()
+        self._stream.close()
+
+    def __iter__(self) -> Iterator[np.ndarray]:
+        while self._stream.active:
+            try:
+                yield self._queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+
+
+def _main() -> None:
+    """Ручная проверка микрофона: раз в секунду печатает число блоков и RMS."""
+    parser = argparse.ArgumentParser(description=_main.__doc__)
+    parser.add_argument("--seconds", type=float, default=5.0)
+    args = parser.parse_args()
+    setup_logging()
+
+    per_second = SAMPLE_RATE // BLOCK_SIZE
+    total = int(args.seconds * per_second)
+    logger.info("устройство ввода: %s", sd.query_devices(kind="input")["name"])
+    with MicrophoneSource() as mic:
+        second: list[np.ndarray] = []
+        for i, block in enumerate(mic, start=1):
+            second.append(block)
+            if len(second) == per_second:
+                rms = float(np.sqrt(np.mean(np.concatenate(second) ** 2)))
+                logger.info("блоков %d, RMS %.4f", i, rms)
+                second.clear()
+            if i >= total:
+                break
+
+
+if __name__ == "__main__":
+    _main()

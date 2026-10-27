@@ -29,3 +29,27 @@ uv run pytest
 ```bash
 uv run ruff check
 ```
+
+## S1: источник звука
+
+Модуль `src/qat/runtime/audio_io.py`: `WavReplaySource` (replay WAV) и `MicrophoneSource`
+(микрофон). Оба отдают блоки float32, моно, 16 кГц, по 480 сэмплов (30 мс).
+
+Тесты replay:
+
+```bash
+uv run pytest tests/test_audio_io.py
+```
+
+Ручная проверка микрофона: раз в секунду печатает число блоков и громкость (RMS).
+Во время речи RMS должен расти. При первом запуске macOS попросит доступ к микрофону.
+
+```bash
+uv run python -m qat.runtime.audio_io --seconds 5
+```
+
+Replay принимает только WAV с частотой 16 кГц. Другие файлы перевести встроенной утилитой macOS:
+
+```bash
+afconvert -f WAVE -d LEF32@16000 input.wav input_16k.wav
+```
