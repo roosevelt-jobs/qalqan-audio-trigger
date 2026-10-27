@@ -1,0 +1,255 @@
+{
+  "detector": "sed_panns",
+  "detector_version": "0.1.0",
+  "use_wake": true,
+  "tolerance_after_sec": 1.0,
+  "positives": 287,
+  "negatives": 1000,
+  "negative_hours": 2.841491649305558,
+  "target_fa_per_hour": 0.1,
+  "operating_point": {
+    "threshold": 0.15,
+    "frr": 0.6132404181184669,
+    "fa_per_hour": 0.0,
+    "misses": 176,
+    "positives": 287,
+    "false_alarms": 0,
+    "negative_hours": 2.841491649305558,
+    "frr_by_condition": {
+      "fsd50k": 0.6132404181184669
+    }
+  },
+  "det": [
+    {
+      "threshold": 0.05,
+      "frr": 0.4912891986062718,
+      "fa_per_hour": 2.111567000897701,
+      "misses": 141,
+      "positives": 287,
+      "false_alarms": 6,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.4912891986062718
+      }
+    },
+    {
+      "threshold": 0.1,
+      "frr": 0.5714285714285714,
+      "fa_per_hour": 0.7038556669659004,
+      "misses": 164,
+      "positives": 287,
+      "false_alarms": 2,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.5714285714285714
+      }
+    },
+    {
+      "threshold": 0.15,
+      "frr": 0.6132404181184669,
+      "fa_per_hour": 0.0,
+      "misses": 176,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.6132404181184669
+      }
+    },
+    {
+      "threshold": 0.2,
+      "frr": 0.662020905923345,
+      "fa_per_hour": 0.0,
+      "misses": 190,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.662020905923345
+      }
+    },
+    {
+      "threshold": 0.25,
+      "frr": 0.710801393728223,
+      "fa_per_hour": 0.0,
+      "misses": 204,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.710801393728223
+      }
+    },
+    {
+      "threshold": 0.3,
+      "frr": 0.7560975609756098,
+      "fa_per_hour": 0.0,
+      "misses": 217,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.7560975609756098
+      }
+    },
+    {
+      "threshold": 0.35,
+      "frr": 0.7909407665505227,
+      "fa_per_hour": 0.0,
+      "misses": 227,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.7909407665505227
+      }
+    },
+    {
+      "threshold": 0.4,
+      "frr": 0.8292682926829268,
+      "fa_per_hour": 0.0,
+      "misses": 238,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.8292682926829268
+      }
+    },
+    {
+      "threshold": 0.45,
+      "frr": 0.8536585365853658,
+      "fa_per_hour": 0.0,
+      "misses": 245,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.8536585365853658
+      }
+    },
+    {
+      "threshold": 0.5,
+      "frr": 0.8815331010452961,
+      "fa_per_hour": 0.0,
+      "misses": 253,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.8815331010452961
+      }
+    },
+    {
+      "threshold": 0.55,
+      "frr": 0.8885017421602788,
+      "fa_per_hour": 0.0,
+      "misses": 255,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.8885017421602788
+      }
+    },
+    {
+      "threshold": 0.6,
+      "frr": 0.9128919860627178,
+      "fa_per_hour": 0.0,
+      "misses": 262,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.9128919860627178
+      }
+    },
+    {
+      "threshold": 0.65,
+      "frr": 0.926829268292683,
+      "fa_per_hour": 0.0,
+      "misses": 266,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.926829268292683
+      }
+    },
+    {
+      "threshold": 0.7,
+      "frr": 0.9512195121951219,
+      "fa_per_hour": 0.0,
+      "misses": 273,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.9512195121951219
+      }
+    },
+    {
+      "threshold": 0.75,
+      "frr": 0.9686411149825784,
+      "fa_per_hour": 0.0,
+      "misses": 278,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.9686411149825784
+      }
+    },
+    {
+      "threshold": 0.8,
+      "frr": 0.9790940766550522,
+      "fa_per_hour": 0.0,
+      "misses": 281,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.9790940766550522
+      }
+    },
+    {
+      "threshold": 0.85,
+      "frr": 0.9930313588850174,
+      "fa_per_hour": 0.0,
+      "misses": 285,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.9930313588850174
+      }
+    },
+    {
+      "threshold": 0.9,
+      "frr": 0.9965156794425087,
+      "fa_per_hour": 0.0,
+      "misses": 286,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 0.9965156794425087
+      }
+    },
+    {
+      "threshold": 0.95,
+      "frr": 1.0,
+      "fa_per_hour": 0.0,
+      "misses": 287,
+      "positives": 287,
+      "false_alarms": 0,
+      "negative_hours": 2.841491649305558,
+      "frr_by_condition": {
+        "fsd50k": 1.0
+      }
+    }
+  ],
+  "warnings": [
+    "негативного потока 2.84 ч: даже 0 тревог не подтверждают FA/h <= 0.1 (нужно >= 10 ч)"
+  ]
+}

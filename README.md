@@ -255,3 +255,49 @@ AsrKeywordsDetector({"ru": ["помогите"], "kk": ["көмектесіңд�
 ```bash
 uv run pytest tests/test_asr_keywords.py
 ```
+
+## S11a: FSD50K eval для теста детектора B
+
+`src/qat/data/fsd50k.py` — подготовка FSD50K eval (Zenodo, DOI 10.5281/zenodo.4060432).
+Проверка по CLAUDE.md 7.2 — `docs/data_card.md`. Данные лежат в `data/` (не в git).
+
+1. Скачать в `data/fsd50k/raw/` файлы `FSD50K.eval_audio.zip`, `FSD50K.eval_audio.z01`,
+   `FSD50K.ground_truth.zip`, `FSD50K.metadata.zip`, `FSD50K.doc.zip` (6,3 ГБ) и положить рядом
+   `expected.md5` с суммами из записи Zenodo. Маленькие архивы распаковать в `data/fsd50k/extracted/`.
+2. Проверить md5, склеить архив, проверить содержимое (только `.wav`) и распаковать:
+
+```bash
+uv run python -m qat.data.fsd50k verify
+```
+
+```bash
+uv run python -m qat.data.fsd50k extract
+```
+
+3. Манифест (позитивы — Screaming/Shout/Yell; спорные Crying_and_sobbing/Cheering/Crowd
+   исключены) и перевод нужных клипов в 16 кГц:
+
+```bash
+uv run python -m qat.data.fsd50k manifest --negatives 1000 --seed 0
+```
+
+```bash
+uv run python -m qat.data.fsd50k convert --only data/processed/fsd50k_eval/manifest_sed_neg1000_seed0.jsonl
+```
+
+4. Стенд:
+
+```bash
+uv run python -m qat.eval.bench --manifest data/processed/fsd50k_eval/manifest_sed_neg1000_seed0.jsonl --detector sed_panns --out reports/fsd50k_eval_neg1000/sed_panns
+```
+
+Тесты подготовки данных:
+
+```bash
+uv run pytest tests/test_data_fsd50k.py
+```
+
+Результат быстрого прогона (`reports/fsd50k_eval_neg1000/`): детектор B при пороге 0,15 —
+FRR 61%, ложных тревог 0 на 2,84 ч негативов. Поймано: Screaming 60%, Shout 25%, Yell 19%.
+Потери: модель (у 46% криков нет окна с оценкой ≥ 0,15), пробуждение (16% клипов не будят
+конвейер), постобработка (сглаживание и «2 подряд» — ещё около 11 пунктов).
