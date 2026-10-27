@@ -24,7 +24,7 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from qat.detectors.energy import EnergyDetector
+from qat.detectors.registry import DETECTORS, make_detector
 from qat.logging_setup import setup_logging
 from qat.runtime.audio_io import AudioSource, MicrophoneSource, WavReplaySource
 from qat.runtime.events import EVENTS_DIR, EventWriter
@@ -129,15 +129,18 @@ def _run_pipeline(
     hub: Hub,
     loop: asyncio.AbstractEventLoop,
     stop: threading.Event,
+    detector_name: str = "energy",
 ) -> None:
-    detector = EnergyDetector()
-    buffer = RingBuffer()
-    postproc = PostProcessor(round(detector.hop_sec * buffer.sample_rate), threshold=threshold)
-    writer = EventWriter(detector, buffer, events_dir)
-    source = make_source()
-    # Микрофон — контекстный менеджер (открывает поток), replay — нет.
-    ctx = source if hasattr(source, "__enter__") else nullcontext(source)
     try:
+        detector = make_detector(detector_name)
+        buffer = RingBuffer()
+        hop = round(detector.hop_sec * buffer.sample_rate)
+        postproc = PostProcessor(hop, threshold=threshold)
+        writer = EventWriter(detector, buffer, events_dir)
+        source = make_source()
+        # Микрофон — контекстный менеджер (открывает поток), replay — нет.
+        ctx = source if hasattr(source, "__enter__") else nullcontext(source)
+        logger.info("конвейер запущен, детектор %s %s", detector.name, detector.version)
         with ctx as src:
             blocks = _realtime(src) if realtime else src
 
@@ -160,6 +163,7 @@ def create_app(
     realtime: bool = False,
     threshold: float = 0.8,
     events_dir: str | Path = EVENTS_DIR,
+    detector: str = "energy",
 ) -> FastAPI:
     events_dir = Path(events_dir)
     events_dir.mkdir(parents=True, exist_ok=True)
@@ -171,7 +175,7 @@ def create_app(
         thread = None
         if make_source is not None:
             args = (make_source, realtime, threshold, events_dir, hub,
-                    asyncio.get_running_loop(), stop)
+                    asyncio.get_running_loop(), stop, detector)
             thread = threading.Thread(target=_run_pipeline, args=args, daemon=True)
             thread.start()
         yield
@@ -216,12 +220,11 @@ def create_app(
 
 
 def _main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Сервер и экран оператора (детектор: заглушка energy)"
-    )
+    parser = argparse.ArgumentParser(description="Сервер и экран оператора")
     src = parser.add_mutually_exclusive_group(required=True)
     src.add_argument("--mic", action="store_true", help="микрофон")
     src.add_argument("--wav", help="replay WAV-файла (16 кГц)")
+    parser.add_argument("--detector", choices=sorted(DETECTORS), default="energy")
     parser.add_argument("--realtime", action="store_true", help="replay в темпе реального времени")
     parser.add_argument("--threshold", type=float, default=0.8)
     parser.add_argument("--events-dir", default=str(EVENTS_DIR))
@@ -231,7 +234,7 @@ def _main() -> None:
     setup_logging()
 
     make_source = MicrophoneSource if args.mic else (lambda: WavReplaySource(args.wav))
-    app = create_app(make_source, args.realtime, args.threshold, args.events_dir)
+    app = create_app(make_source, args.realtime, args.threshold, args.events_dir, args.detector)
     uvicorn.run(app, host=args.host, port=args.port)
 
 

@@ -84,20 +84,21 @@ def run_events(
 
 
 def _main() -> None:
-    """Прогон WAV через конвейер с заглушкой energy: события тревоги и клипы в events/."""
-    from qat.detectors.energy import EnergyDetector
+    """Прогон WAV через конвейер: события тревоги и клипы в events/."""
+    from qat.detectors.registry import DETECTORS, make_detector
     from qat.runtime.events import EVENTS_DIR, EventWriter
     from qat.runtime.postproc import PostProcessor
 
     parser = argparse.ArgumentParser(description=_main.__doc__)
     parser.add_argument("--wav", required=True)
+    parser.add_argument("--detector", choices=sorted(DETECTORS), default="energy")
     parser.add_argument("--threshold", type=float, default=0.8)
     parser.add_argument("--events-dir", default=str(EVENTS_DIR))
     args = parser.parse_args()
     setup_logging()
 
     source = WavReplaySource(args.wav)
-    detector = EnergyDetector()
+    detector = make_detector(args.detector)
     buffer = RingBuffer()
     hop = round(detector.hop_sec * buffer.sample_rate)
     postproc = PostProcessor(hop, threshold=args.threshold)

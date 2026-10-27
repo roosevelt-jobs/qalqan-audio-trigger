@@ -12,7 +12,7 @@
 import argparse
 import csv
 import json
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -20,7 +20,7 @@ import numpy as np
 import soundfile as sf
 
 from qat.detectors.base import Detector
-from qat.detectors.energy import EnergyDetector
+from qat.detectors.registry import DETECTORS, make_detector
 from qat.eval.metrics import HIT_TOLERANCE_AFTER_SEC, ScoredFile, det_curve, threshold_at_fa
 from qat.logging_setup import setup_logging
 from qat.runtime.audio_io import SAMPLE_RATE, WavReplaySource
@@ -28,7 +28,6 @@ from qat.runtime.pipeline import run_scores
 from qat.runtime.ring_buffer import RingBuffer
 from qat.runtime.wake import SileroVad, Wake
 
-DETECTORS: dict[str, Callable[[], Detector]] = {"energy": EnergyDetector}
 # ASSUMPTION: сетка порогов по умолчанию 0.05 … 0.95 с шагом 0.05.
 DEFAULT_THRESHOLDS = [round(x, 2) for x in np.arange(0.05, 0.951, 0.05)]
 TARGET_FA_PER_HOUR = 0.1
@@ -147,7 +146,7 @@ def _main() -> None:
     args = parser.parse_args()
     setup_logging()
 
-    report = evaluate(load_manifest(args.manifest), DETECTORS[args.detector](),
+    report = evaluate(load_manifest(args.manifest), make_detector(args.detector),
                       use_wake=not args.no_wake)
     write_report(report, args.out)
 

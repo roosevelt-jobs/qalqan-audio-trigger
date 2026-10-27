@@ -202,3 +202,33 @@ uv run python -m qat.eval.bench --manifest manifest.jsonl --detector energy --ou
 ```bash
 uv run pytest tests/test_eval_metrics.py tests/test_eval_bench.py
 ```
+
+## S9: детектор B (PANNs)
+
+`src/qat/detectors/sed_panns.py` — `SedPannsDetector` на предобученной PANNs Cnn14_16k (AudioSet,
+527 классов). Оценка окна = максимум вероятностей по классам «крик и возглас»: Screaming, Shout,
+Yell, Bellow, Battle cry, Children shouting. Окно 1 с, шаг 0,25 с, CPU в один поток.
+Код модели — `src/qat/detectors/panns_cnn14.py` (перенесён у авторов, MIT).
+Источники, лицензии и хеши — `models/panns/README.md`.
+
+Веса (359 МБ) в git не входят, их нужно скачать один раз:
+
+```bash
+curl -L -o "models/panns/Cnn14_16k_mAP=0.438.pth" "https://zenodo.org/records/3987831/files/Cnn14_16k_mAP%3D0.438.pth?download=1"
+```
+
+Детектор выбирается по имени (`src/qat/detectors/registry.py`) в стенде, сервере и CLI конвейера:
+
+```bash
+uv run python -m server.app --mic --detector sed_panns --threshold 0.5
+```
+
+```bash
+uv run python -m qat.eval.bench --manifest manifest.jsonl --detector sed_panns --out reports/sed_panns
+```
+
+Тесты (без весов два теста пропускаются):
+
+```bash
+uv run pytest tests/test_sed_panns.py
+```
