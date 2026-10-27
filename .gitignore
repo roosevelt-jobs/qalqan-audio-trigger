@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# Клипы событий и датасеты не коммитим (CLAUDE.md, разделы 7 и 9)
+events/
+data/

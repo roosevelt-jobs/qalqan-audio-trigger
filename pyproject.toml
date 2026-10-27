@@ -1,0 +1,33 @@
+[project]
+name = "qalqan-audio-trigger"
+version = "0.1.0"
+description = "MVP звукового триггера тревоги для Qalqan Badge"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[build-system]
+# ASSUMPTION: бэкенд сборки uv_build (стандартный для uv), а не hatchling.
+# Диапазон под установленный uv 0.13.6 (brew).
+requires = ["uv_build>=0.13.6,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "qat"
+
+[tool.ruff]
+# ASSUMPTION: длина строки 100, набор правил E, F, I, B, UP.
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
