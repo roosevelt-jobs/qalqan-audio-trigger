@@ -53,3 +53,14 @@ Replay принимает только WAV с частотой 16 кГц. Дру
 ```bash
 afconvert -f WAVE -d LEF32@16000 input.wav input_16k.wav
 ```
+
+## S2: кольцевой буфер
+
+Модуль `src/qat/runtime/ring_buffer.py`: `RingBuffer` хранит последние 30 с аудио (по умолчанию).
+Время адресуется номером сэмпла от старта потока. `clip(center, -5.0, 5.0)` вырезает клип
+вокруг события. Если нужных сэмплов уже нет или они ещё не записаны, будет `ValueError`;
+что есть в буфере, показывает `available_range()`.
+
+```bash
+uv run pytest tests/test_ring_buffer.py
+```
