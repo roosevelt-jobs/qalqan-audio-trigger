@@ -141,3 +141,36 @@ uv run python -m qat.runtime.pipeline --wav tests/data/speech_ru.wav --threshold
 ```bash
 shasum -a 256 events/<event_id>.wav
 ```
+
+## S7: сервер и экран оператора
+
+`server/app.py` — FastAPI + WebSocket, `server/static/index.html` — экран оператора. Конвейер
+(детектор пока заглушка `energy`) работает в фоновом потоке сервера. Сервер слушает только
+`127.0.0.1:8000`. Телеметрия FastAPI (OpenTelemetry) выключена в коде.
+
+| Адрес | Что делает |
+|---|---|
+| `GET /` | экран оператора |
+| `WS /ws` | история (последние 50 событий) при подключении, дальше — новые события и обновления |
+| `GET /clips/<event_id>.wav` | клип события |
+| `POST /events/<event_id>/decision` | `{"decision": "confirmed" \| "rejected"}` → JSON события и журнал `events/decisions.jsonl` |
+
+На карточке тревоги видна задержка от срабатывания до появления на экране (цель ≤ 500 мс).
+
+Запуск с микрофоном, затем открыть http://127.0.0.1:8000 и громко сказать что-нибудь или хлопнуть:
+
+```bash
+uv run python -m server.app --mic
+```
+
+Демо на WAV в темпе реального времени:
+
+```bash
+uv run python -m server.app --wav tests/data/speech_ru.wav --realtime --threshold 0.6
+```
+
+Тесты:
+
+```bash
+uv run pytest tests/test_server.py
+```
