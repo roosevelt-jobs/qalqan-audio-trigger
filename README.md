@@ -86,3 +86,21 @@ say -v Milena -o phrase.wav --data-format=LEF32@16000 "Внимание! Мне 
 ```bash
 uv run pytest tests/test_wake.py
 ```
+
+## S4: интерфейс детектора + заглушка
+
+- `src/qat/detectors/base.py` — протокол `Detector` по контракту.
+- `src/qat/detectors/energy.py` — **заглушка**: оценка = громкость окна (−60 dBFS → 0, 0 dBFS → 1).
+  Тревогу не детектирует, нужна для отладки конвейера.
+- `src/qat/runtime/pipeline.py` — `run_scores(source, detector, wake, buffer)`: поток оценок
+  `Score(sample, score)`. Концы окон кратны шагу детектора; при неактивном wake окна пропускаются.
+
+```bash
+uv run pytest tests/test_detectors.py tests/test_pipeline.py
+```
+
+Ручной прогон WAV через конвейер с заглушкой (максимум оценки по секундам, «-» — детектор не будили):
+
+```bash
+uv run python -m qat.runtime.pipeline --wav tests/data/speech_ru.wav
+```
