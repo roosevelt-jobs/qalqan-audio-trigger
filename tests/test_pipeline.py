@@ -1,10 +1,13 @@
+import hashlib
 from pathlib import Path
 
 import numpy as np
 
 from qat.detectors.energy import EnergyDetector
 from qat.runtime.audio_io import BLOCK_SIZE, SAMPLE_RATE, WavReplaySource
-from qat.runtime.pipeline import run_scores
+from qat.runtime.events import EventWriter
+from qat.runtime.pipeline import run_events, run_scores
+from qat.runtime.postproc import PostProcessor
 from qat.runtime.ring_buffer import RingBuffer
 from qat.runtime.wake import Wake
 
@@ -87,3 +90,23 @@ def test_replay_speech_with_energy_stub():
     assert t.min() >= 2.0  # в начальной тишине 0–2 с оценок нет
     assert values[(t >= 2.5) & (t < 5.5)].min() > 0.4
     assert run() == scores  # детерминированно
+
+
+def test_replay_speech_produces_one_event_with_clip(tmp_path):
+    detector = EnergyDetector()
+    buffer = RingBuffer()
+    postproc = PostProcessor(round(detector.hop_sec * SAMPLE_RATE), threshold=0.6)
+    writer = EventWriter(detector, buffer, tmp_path / "events")
+
+    events = list(
+        run_events(WavReplaySource(SPEECH_WAV), detector, Wake(), buffer, postproc, writer)
+    )
+
+    # этап 1 (без клипа), затем этап 2 (с клипом) для одного и того же события
+    assert [e.clip_ready for e in events] == [False, True]
+    first, done = events
+    assert done.event_id == first.event_id
+    assert done.score >= 0.6
+    assert -5.0 <= done.clip_start_offset_sec < 0 < done.clip_end_offset_sec <= 5.0
+    clip = tmp_path / done.clip_path
+    assert hashlib.sha256(clip.read_bytes()).hexdigest() == done.clip_sha256

@@ -99,11 +99,7 @@ uv run pytest tests/test_wake.py
 uv run pytest tests/test_detectors.py tests/test_pipeline.py
 ```
 
-Ручной прогон WAV через конвейер с заглушкой (максимум оценки по секундам, «-» — детектор не будили):
-
-```bash
-uv run python -m qat.runtime.pipeline --wav tests/data/speech_ru.wav
-```
+Ручной прогон WAV через весь конвейер — см. раздел S6.
 
 ## S5: постобработка
 
@@ -114,4 +110,34 @@ uv run python -m qat.runtime.pipeline --wav tests/data/speech_ru.wav
 
 ```bash
 uv run pytest tests/test_postproc.py
+```
+
+## S6: события
+
+Модуль `src/qat/runtime/events.py`: `EventWriter` пишет `events/<event_id>.json` и
+`events/<event_id>.wav` (16 кГц, моно, float32). Событие выдаётся в два этапа:
+
+1. Сразу при срабатывании — JSON, где `clip_path`, `clip_sha256` и смещения клипа = `null`.
+2. Когда записаны 5 с после срабатывания — тот же `event_id` с клипом −5…+5 с и SHA-256 файла клипа.
+
+Если срабатывание было раньше 5 с от старта или поток кончился раньше «+5 с», клип обрезается
+до доступного аудио, а в JSON пишутся фактические смещения. Тишиной клип не дополняется.
+
+`pipeline.run_events(...)` связывает весь конвейер: источник → буфер → пробуждение → детектор →
+постобработка → события.
+
+```bash
+uv run pytest tests/test_events.py tests/test_pipeline.py
+```
+
+Ручной прогон WAV с заглушкой `energy`: печатает оба этапа событий, клипы и JSON — в `events/`.
+
+```bash
+uv run python -m qat.runtime.pipeline --wav tests/data/speech_ru.wav --threshold 0.6
+```
+
+Проверить хеш клипа:
+
+```bash
+shasum -a 256 events/<event_id>.wav
 ```
