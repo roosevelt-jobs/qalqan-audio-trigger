@@ -104,3 +104,14 @@ uv run pytest tests/test_detectors.py tests/test_pipeline.py
 ```bash
 uv run python -m qat.runtime.pipeline --wav tests/data/speech_ru.wav
 ```
+
+## S5: постобработка
+
+Модуль `src/qat/runtime/postproc.py`: `PostProcessor.process(score) -> Trigger | None`.
+Шаги: скользящее среднее по `smooth_windows` окнам → порог (`>=`) → `consecutive` окон подряд →
+дебаунс `debounce_sec`. Срабатывает один раз на эпизод превышения порога. Разрыв в сетке окон
+(wake был неактивен) сбрасывает сглаживание и счётчик. По умолчанию: 0.8, 3 окна, 2 подряд, 5 с.
+
+```bash
+uv run pytest tests/test_postproc.py
+```
