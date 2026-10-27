@@ -12,3 +12,7 @@ events/
 # Веса PANNs (359 МБ) не коммитим: скачиваются отдельно, хеш проверяется при загрузке
 models/panns/*.pth
 models/panns/*.part
+
+# Модели Vosk (~100 МБ) не коммитим: скачиваются отдельно, см. models/vosk/README.md
+models/vosk/*/
+models/vosk/*.zip*

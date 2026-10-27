@@ -13,6 +13,7 @@ dependencies = [
     "torch>=2.14.1",
     "torchlibrosa>=0.1.0",
     "uvicorn>=0.54.0",
+    "vosk==0.3.44",
     "websockets>=17.3",
 ]
 

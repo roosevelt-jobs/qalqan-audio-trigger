@@ -232,3 +232,26 @@ uv run python -m qat.eval.bench --manifest manifest.jsonl --detector sed_panns -
 ```bash
 uv run pytest tests/test_sed_panns.py
 ```
+
+## S10: детектор C (ASR + ключевые слова)
+
+`src/qat/detectors/asr_keywords.py` — `AsrKeywordsDetector`: два потоковых распознавателя Vosk
+(русский `small-ru-0.22`, казахский `small-kz-0.42`) с полным словарём и поиск ключевых фраз в
+распознанном тексте. Окно = шаг = 0,25 с. Оценка: уверенность Vosk для финального результата,
+1,0 — если фраза есть в промежуточном тексте. Распознанный текст никуда не пишется.
+
+Итоговый список кодовых слов пока не выбран, поэтому детектор принимает их параметром и в
+реестр (`--detector`) ещё не добавлен:
+
+```python
+AsrKeywordsDetector({"ru": ["помогите"], "kk": ["көмектесіңдер"]})
+```
+
+Для постобработки нужны `smooth_windows=1, consecutive=1` (`RECOMMENDED_POSTPROC`): оценка — одиночный
+всплеск. Модели (~190 МБ распакованными) в git не входят, см. `models/vosk/README.md`.
+
+Юнит-тесты на фразах голосами macOS (Milena, Aru), без моделей пропускаются:
+
+```bash
+uv run pytest tests/test_asr_keywords.py
+```
