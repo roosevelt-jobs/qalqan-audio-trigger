@@ -64,3 +64,25 @@ afconvert -f WAVE -d LEF32@16000 input.wav input_16k.wav
 ```bash
 uv run pytest tests/test_ring_buffer.py
 ```
+
+## S3: пробуждение
+
+Модуль `src/qat/runtime/wake.py`: `Wake.process(block) -> bool` решает, будить ли детектор.
+Ниже −50 dBFS — тихо; выше −20 dBFS — громкий звук будит сразу; между ними решает Silero VAD.
+После активности состояние держится ещё 1 с.
+
+Модель: `models/vad/silero_vad.onnx` из пакета silero-vad 6.2.3 (MIT, `models/vad/LICENSE`),
+запускается через onnxruntime только на CPU. При загрузке сверяется SHA-256 файла.
+
+Тестовая фраза `tests/data/speech_ru.wav` сгенерирована офлайн голосом macOS и нужна только для
+юнит-теста VAD, не для оценки моделей:
+
+```bash
+say -v Milena -o phrase.wav --data-format=LEF32@16000 "Внимание! Мне нужна помощь, срочно вызовите скорую."
+```
+
+К фразе добавлено по 2 с тишины с каждой стороны, файл сохранён как 16-бит PCM, 16 кГц.
+
+```bash
+uv run pytest tests/test_wake.py
+```
