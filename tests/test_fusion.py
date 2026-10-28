@@ -148,3 +148,44 @@ def test_two_detectors_one_alarm(tmp_path):
     assert len(final) == 1
     assert final[0].detector == "asr_keywords+energy"
     assert len({x.event_id for x in events}) == 1  # все этапы — одна тревога
+
+
+class Scripted:
+    """Пробуждение по заданному списку ответов, по одному на блок."""
+
+    def __init__(self, answers):
+        self.answers = iter(answers)
+
+    def process(self, block):
+        return next(self.answers)
+
+
+def test_per_detector_wake():
+    a, b = Fake("a", 0.25, 0.25), Fake("b", 0.25, 0.25)
+    src = blocks(2.0)
+    n = len(src)
+    shared = Scripted([False] * n)  # общее пробуждение спит
+    own_b = Scripted([True] * n)  # у b своё — бодрствует
+
+    got = [[], []]
+    for per in _scores_per_block_multi(src, [a, b], shared, RingBuffer(), [None, own_b]):
+        got[0] += per[0]
+        got[1] += per[1]
+
+    assert got[0] == []  # a живёт по общему пробуждению
+    assert got[1] == list(run_scores(src, b, AlwaysAwake(), RingBuffer()))
+
+
+def test_registry_wake_for_b_is_loudness_only():
+    from qat.detectors.registry import make_wake
+
+    assert make_wake(Fake("asr_keywords", 0.25, 0.25)) is None  # C — общее (с VAD)
+    wake_b = make_wake(Fake("sed_panns", 1.0, 0.25))
+    t = np.arange(SR) / SR
+    # тихий визг-тон ~ -33 dBFS: не речь, ниже громкого порога общего пробуждения
+    tone = (0.03 * np.sin(2 * np.pi * 1200 * t)).astype(np.float32)
+    tone_blocks = [tone[i : i + 480] for i in range(0, len(tone) - 479, 480)]
+
+    assert all(wake_b.process(x) for x in tone_blocks)
+    shared = Wake()
+    assert not any(shared.process(x) for x in tone_blocks)

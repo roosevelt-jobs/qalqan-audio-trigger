@@ -13,13 +13,18 @@ DEFAULT_KEYWORDS = {"ru": ["на помощь"], "kk": ["көмектесіңд�
 class DetectorConfig:
     threshold: float
     postproc: dict = field(default_factory=dict)  # параметры PostProcessor кроме порога
+    wake: dict | None = None  # своё пробуждение (параметры Wake); None — общее
 
 
 # ASSUMPTION: energy — заглушка (порог как раньше); sed_panns — порог из S9.1;
 # asr_keywords — оценка-всплеск, поэтому без сглаживания и «1 подряд».
+# sed_panns будится только по громкости ≥ -35 dBFS, без VAD: VAD не считает визг речью
+# (замер на FSD50K: визг 65% поймано против 58%, ложных 2,2/ч против 1,4/ч, S14a).
 CONFIGS = {
     "energy": DetectorConfig(threshold=0.8),
-    "sed_panns": DetectorConfig(threshold=0.15),
+    "sed_panns": DetectorConfig(
+        threshold=0.15, wake={"energy_threshold_dbfs": -35.0, "loud_threshold_dbfs": -35.0}
+    ),
     "asr_keywords": DetectorConfig(
         threshold=0.5, postproc={"smooth_windows": 1, "consecutive": 1}
     ),
@@ -68,6 +73,16 @@ def parse_detector_list(value: str) -> list[str]:
             f"список детекторов {value!r}: неизвестные {unknown}, есть {sorted(DETECTORS)}"
         )
     return names
+
+
+def make_wake(detector: Detector):
+    """Своё пробуждение детектора из реестра или None (детектор использует общее)."""
+    cfg = CONFIGS.get(detector.name)
+    if cfg is None or cfg.wake is None:
+        return None
+    from qat.runtime.wake import Wake
+
+    return Wake(**cfg.wake)
 
 
 def make_postproc(detector: Detector, sample_rate: int, threshold: float | None = None):

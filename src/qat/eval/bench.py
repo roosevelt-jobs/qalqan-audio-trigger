@@ -20,7 +20,7 @@ import numpy as np
 import soundfile as sf
 
 from qat.detectors.base import Detector
-from qat.detectors.registry import CONFIGS, DETECTORS, make_detector
+from qat.detectors.registry import CONFIGS, DETECTORS, make_detector, make_wake
 from qat.eval.metrics import HIT_TOLERANCE_AFTER_SEC, ScoredFile, det_curve, threshold_at_fa
 from qat.logging_setup import setup_logging
 from qat.runtime.audio_io import SAMPLE_RATE, WavReplaySource
@@ -73,9 +73,13 @@ class _AlwaysAwake:
 
 
 def score_file(item: Item, detector: Detector, vad: SileroVad | None) -> ScoredFile:
-    """Прогон файла через конвейер. vad=None — без пробуждения."""
+    """Прогон файла через конвейер. vad=None — без пробуждения; если у детектора в реестре
+    своё пробуждение (B — только по громкости), используется оно."""
     detector.reset()
-    wake = Wake(vad=vad) if vad is not None else _AlwaysAwake()
+    if vad is None:
+        wake = _AlwaysAwake()
+    else:
+        wake = make_wake(detector) or Wake(vad=vad)
     scores = list(run_scores(WavReplaySource(item.path), detector, wake, RingBuffer()))
     info = sf.info(str(item.path))
     return ScoredFile(scores, info.frames / info.samplerate, item.condition, item.target)

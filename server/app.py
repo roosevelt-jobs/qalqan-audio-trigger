@@ -28,6 +28,7 @@ from qat.detectors.registry import (
     DETECTORS,
     make_detector,
     make_postproc,
+    make_wake,
     parse_detector_list,
 )
 from qat.logging_setup import setup_logging
@@ -139,6 +140,7 @@ def _run_pipeline(
         detectors = [make_detector(n) for n in parse_detector_list(detector_names)]
         buffer = RingBuffer()
         postprocs = [make_postproc(d, buffer.sample_rate, threshold) for d in detectors]
+        wakes = [make_wake(d) for d in detectors]
         writer = EventWriter(detectors, buffer, events_dir, merge_window_sec=MERGE_WINDOW_SEC)
         source = make_source()
         # Микрофон — контекстный менеджер (открывает поток), replay — нет.
@@ -155,7 +157,9 @@ def _run_pipeline(
                         return
                     yield block
 
-            events = run_events_multi(until_stopped(), detectors, Wake(), buffer, postprocs, writer)
+            events = run_events_multi(
+                until_stopped(), detectors, Wake(), buffer, postprocs, writer, wakes
+            )
             for event in events:
                 # Ждём доставки, чтобы этапы события не перепутались местами.
                 asyncio.run_coroutine_threadsafe(hub.publish(event.to_json()), loop).result()

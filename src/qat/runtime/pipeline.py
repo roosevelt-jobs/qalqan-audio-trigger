@@ -30,11 +30,16 @@ class Score(NamedTuple):
 
 
 def _scores_per_block_multi(
-    source: AudioSource, detectors: Sequence[Detector], wake: Wake, buffer: RingBuffer
+    source: AudioSource,
+    detectors: Sequence[Detector],
+    wake: Wake,
+    buffer: RingBuffer,
+    wakes: Sequence[Wake | None] | None = None,
 ) -> Iterator[list[list[Score]]]:
     """Для каждого блока источника и каждого детектора: оценки окон, закончившихся в блоке.
 
-    Источник, буфер и пробуждение общие; у каждого детектора своя сетка окон.
+    Источник и буфер общие; у каждого детектора своя сетка окон. Пробуждение общее (wake),
+    но детектору можно дать своё: wakes[i] не None (S14a: B — только по громкости).
     """
     grids = []
     for det in detectors:
@@ -43,20 +48,24 @@ def _scores_per_block_multi(
         if window > buffer.capacity:
             raise ValueError(f"окно {window} сэмплов больше буфера {buffer.capacity}")
         grids.append([window, hop, math.ceil(window / hop) * hop])  # окно, шаг, конец след. окна
-    was_active = False
+    own = list(wakes) if wakes is not None else [None] * len(detectors)
+    if len(own) != len(detectors):
+        raise ValueError("wakes: по одному на детектор (None — общее пробуждение)")
+    was_active = [False] * len(detectors)
 
     for block in source:
         buffer.write(block)
         # ASSUMPTION: окно оценивается, если wake активен на блоке, где пересекается граница шага.
-        active = wake.process(block)
-        if was_active and not active:
-            # ASSUMPTION: после паузы детектор начинает без накопленного контекста.
-            for det in detectors:
-                det.reset()
-        was_active = active
+        shared = wake.process(block)
+        actives = [w.process(block) if w is not None else shared for w in own]
 
         per_detector = []
-        for det, grid in zip(detectors, grids, strict=True):
+        for i, (det, grid) in enumerate(zip(detectors, grids, strict=True)):
+            active = actives[i]
+            if was_active[i] and not active:
+                # ASSUMPTION: после паузы детектор начинает без накопленного контекста.
+                det.reset()
+            was_active[i] = active
             window, hop, next_end = grid
             scores = []
             while buffer.total_written >= next_end:
@@ -102,13 +111,15 @@ def run_events_multi(
     buffer: RingBuffer,
     postprocs: Sequence[PostProcessor],
     writer: EventWriter,
+    wakes: Sequence[Wake | None] | None = None,
 ) -> Iterator[AlarmEvent]:
     """Несколько детекторов параллельно, тревога от любого («любой из двух»).
 
     Срабатывания разных детекторов близко по времени writer сливает в одну тревогу:
     то же событие выдаётся ещё раз с обновлённым составом детекторов.
+    wakes — своё пробуждение для детектора (None — общее wake).
     """
-    for per_detector in _scores_per_block_multi(source, detectors, wake, buffer):
+    for per_detector in _scores_per_block_multi(source, detectors, wake, buffer, wakes):
         for det, postproc, scores in zip(detectors, postprocs, per_detector, strict=True):
             for score in scores:
                 trigger = postproc.process(score)
@@ -124,6 +135,7 @@ def _main() -> None:
         DETECTORS,
         make_detector,
         make_postproc,
+        make_wake,
         parse_detector_list,
     )
     from qat.runtime.events import EVENTS_DIR, MERGE_WINDOW_SEC, EventWriter
@@ -143,7 +155,8 @@ def _main() -> None:
     buffer = RingBuffer()
     postprocs = [make_postproc(d, buffer.sample_rate, args.threshold) for d in detectors]
     writer = EventWriter(detectors, buffer, args.events_dir, merge_window_sec=MERGE_WINDOW_SEC)
-    for event in run_events_multi(source, detectors, Wake(), buffer, postprocs, writer):
+    wakes = [make_wake(d) for d in detectors]
+    for event in run_events_multi(source, detectors, Wake(), buffer, postprocs, writer, wakes):
         print(json.dumps(event.to_json(), ensure_ascii=False))
 
 
