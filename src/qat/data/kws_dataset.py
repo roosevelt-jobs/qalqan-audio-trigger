@@ -13,6 +13,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import random
 from itertools import product
 from pathlib import Path
@@ -105,7 +106,7 @@ def _synth_job(args) -> list[dict]:
     return rows
 
 
-def synth(cfg: dict, out: Path, workers: int = 4) -> list[dict]:
+def synth(cfg: dict, out: Path, workers: int | None = None) -> list[dict]:
     from concurrent.futures import ProcessPoolExecutor
 
     seed = cfg["seed"]
@@ -126,6 +127,9 @@ def synth(cfg: dict, out: Path, workers: int = 4) -> list[dict]:
         for (spk, person), ls, ns in product(voice["speakers"].items(), pr["length_scale"],
                                               pr["noise_scale"])
     ]
+    # Каждый процесс Piper сам берёт ~2 ядра: по умолчанию процессов = ядра / 2.
+    workers = workers or max(1, (os.cpu_count() or 2) // 2)
+    print(f"запусков Piper: {len(jobs)}, параллельно: {workers}", flush=True)
     rows = []
     with ProcessPoolExecutor(max_workers=workers) as pool:
         for job_rows in pool.map(_synth_job, jobs):  # порядок результатов = порядок jobs
@@ -203,12 +207,13 @@ def summary(rows: list[dict]) -> str:
 def _main() -> None:
     parser = argparse.ArgumentParser(description="Набор для модели A (KWS)")
     parser.add_argument("step", choices=["synth", "build", "summary"])
+    parser.add_argument("--workers", type=int, default=None, help="synth: процессов Piper")
     args = parser.parse_args()
     setup_logging()
     cfg = load_config()
     out = ROOT / cfg["out_dir"]
     if args.step == "synth":
-        rows = synth(cfg, out)
+        rows = synth(cfg, out, args.workers)
         bad = [r for r in rows if not r["verified"]]
         print(f"синтезировано {len(rows)}, брак (Vosk) {len(bad)}")
         with (out / "synth_rejected.csv").open("w", newline="") as f:

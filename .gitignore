@@ -20,3 +20,6 @@ models/vosk/*.zip*
 # Голоса Piper (~375 МБ) не коммитим: скачиваются отдельно, см. models/piper/README.md
 models/piper/*.onnx
 models/piper/*.onnx.json
+
+# Архивы для Google Диска
+dist/

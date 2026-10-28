@@ -356,3 +356,31 @@ uv run python -m server.app --mic --detector asr_keywords,sed_panns
 ```bash
 uv run pytest tests/test_fusion.py
 ```
+
+## Запуск в Google Colab (подготовка данных и обучение)
+
+На Google Диск загружается только код; модели и данные Colab скачивает сам из первоисточников
+по закреплённым версиям со сверкой хешей (`src/qat/assets.py`).
+
+1. Собрать архив кода (только закоммиченные файлы, без данных, весов и личных записей):
+
+```bash
+bash scripts/make_bundle.sh
+```
+
+2. Загрузить `dist/qalqan_<коммит>.zip` и `notebooks/colab.ipynb` в папку `qalqan` на Google Диске.
+3. Открыть ноутбук в Colab (для обучения — среда с T4 GPU) и выполнить ячейки по порядку.
+
+В бесплатном Colab 2 ядра CPU: синтез речи там не быстрее M2, выигрыш — GPU для обучения и то,
+что Мак не занят. Результаты (`kws_dataset.tar.gz`, позже модель) ноутбук кладёт на Диск.
+
+Загрузчик моделей и данных работает и локально — например, только модели детекторов в
+пределах 0,5 ГБ:
+
+```bash
+uv run python -m qat.assets list --profile all
+```
+
+```bash
+uv run python -m qat.assets fetch --profile detectors --max-gb 0.5
+```
