@@ -29,11 +29,19 @@ def test_build_manifest_known_answer():
 
     assert rows == [
         {"path": "1.wav", "label": "negative"},
-        {"path": "2.wav", "label": "positive", "condition": "fsd50k"},
-        {"path": "3.wav", "label": "positive", "condition": "fsd50k"},
-        {"path": "5.wav", "label": "positive", "condition": "fsd50k"},
+        {"path": "2.wav", "label": "positive", "condition": "Yell"},  # самая узкая метка
+        {"path": "3.wav", "label": "positive", "condition": "Screaming"},
+        {"path": "5.wav", "label": "positive", "condition": "Shout"},
         {"path": "7.wav", "label": "negative"},
     ]
+
+
+def test_build_manifest_adds_uploader_group():
+    gt = {"1": {"Shout"}, "2": {"Dog"}}
+
+    rows = build_manifest(gt, uploaders={"1": "alice", "2": "bob"})
+
+    assert [r["group"] for r in rows] == ["alice", "bob"]
 
 
 def test_read_ground_truth(tmp_path):

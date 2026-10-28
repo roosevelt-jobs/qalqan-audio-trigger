@@ -109,17 +109,27 @@ def build_manifest(
     ground_truth: dict[str, set[str]],
     positive_labels: Sequence[str] = POSITIVE_LABELS,
     excluded_labels: Sequence[str] = EXCLUDED_LABELS,
+    uploaders: dict[str, str] | None = None,
 ) -> list[dict]:
-    """Строки манифеста стенда S8. Пути относительно папки с клипами 16 кГц."""
+    """Строки манифеста стенда S8. Пути относительно папки с клипами 16 кГц.
+
+    condition позитива — самая узкая из его меток (Yell и Screaming уже Shout, метки
+    распространены вверх по онтологии). group — автор клипа на Freesound, если передан.
+    """
     rows = []
     for fname, labels in sorted(ground_truth.items(), key=lambda kv: int(kv[0])):
         if labels & set(positive_labels):
             # Разметка на весь клип: положение крика неизвестно, target не задаётся.
-            rows.append({"path": f"{fname}.wav", "label": "positive", "condition": "fsd50k"})
+            primary = next(c for c in ("Screaming", "Yell", "Shout", *positive_labels)
+                           if c in labels)
+            row = {"path": f"{fname}.wav", "label": "positive", "condition": primary}
         elif labels & set(excluded_labels):
             continue
         else:
-            rows.append({"path": f"{fname}.wav", "label": "negative"})
+            row = {"path": f"{fname}.wav", "label": "negative"}
+        if uploaders is not None:
+            row["group"] = uploaders[fname]
+        rows.append(row)
     return rows
 
 
@@ -162,7 +172,9 @@ def _main() -> None:
         print(f"переведено {len(files)} клипов, {total / 3600:.1f} ч, в {PROCESSED_DIR}")
     if args.step == "manifest":
         gt = read_ground_truth(EXTRACTED_DIR / "FSD50K.ground_truth" / "eval.csv")
-        rows = build_manifest(gt)
+        info_path = EXTRACTED_DIR / "FSD50K.metadata" / "eval_clips_info_FSD50K.json"
+        uploaders = {k: v["uploader"] for k, v in json.loads(info_path.read_text()).items()}
+        rows = build_manifest(gt, uploaders=uploaders)
         name = "manifest_sed.jsonl"
         if args.negatives is not None:
             rows = sample_negatives(rows, args.negatives, args.seed)
