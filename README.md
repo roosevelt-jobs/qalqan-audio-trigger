@@ -384,3 +384,26 @@ uv run python -m qat.assets list --profile all
 ```bash
 uv run python -m qat.assets fetch --profile detectors --max-gb 0.5
 ```
+
+## S12: модель A (KWS)
+
+- `src/qat/features.py` — единый код признаков (log-mel 40 полос, окно 25 мс, шаг 10 мс, окно
+  модели 1,5 с) для обучения и детектора.
+- `src/qat/models/dscnn.py` — DS-CNN (≈ 22,6 тыс. параметров, ≈ 88 КБ), 3 класса: другое /
+  «на помощь» / «көмектесіңдер».
+- `src/qat/train.py` + `configs/train.yaml` — обучение: признаки кешируются, сбалансированные
+  батчи, SpecAugment, cuda → mps → cpu; лучшая эпоха — по «фраз выше порога − негативов выше
+  порога» на validation (отложенные люди). Результат: `models/kws/kws_dscnn_v1.pt` и отчёт.
+- `src/qat/detectors/kws.py` — детектор A (`--detector kws`), окно 1,5 с, шаг 0,1 с.
+
+Обучение — в Google Colab (ноутбук, ячейки 6–7) или локально:
+
+```bash
+uv run python -m qat.train
+```
+
+Validation — синтез отложенными голосами; настоящий FRR модели A — только на живых записях.
+
+```bash
+uv run pytest tests/test_kws_model.py
+```

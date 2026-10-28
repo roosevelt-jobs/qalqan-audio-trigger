@@ -23,3 +23,6 @@ models/piper/*.onnx.json
 
 # Архивы для Google Диска
 dist/
+
+# Модель A: кеш признаков большой, сама модель (.pt) маленькая — в git можно
+models/kws/features_*.npz

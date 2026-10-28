@@ -28,6 +28,8 @@ CONFIGS = {
     "asr_keywords": DetectorConfig(
         threshold=0.5, postproc={"smooth_windows": 1, "consecutive": 1}
     ),
+    # ASSUMPTION: kws (A) v1 — порог 0,5 и постобработка по умолчанию; подбирается на записях.
+    "kws": DetectorConfig(threshold=0.5),
 }
 
 
@@ -50,10 +52,17 @@ def _asr_keywords() -> Detector:
     return AsrKeywordsDetector(DEFAULT_KEYWORDS)
 
 
+def _kws() -> Detector:
+    from qat.detectors.kws import KwsDetector
+
+    return KwsDetector()
+
+
 DETECTORS: dict[str, Callable[[], Detector]] = {
     "energy": _energy,
     "sed_panns": _sed_panns,
     "asr_keywords": _asr_keywords,
+    "kws": _kws,
 }
 
 
