@@ -29,33 +29,38 @@ class SynthJob:
     noise_w_scale: float
 
 
-def piper_file_name(text: str) -> str:
-    """Имя файла, которое Piper даёт строке в режиме --output-dir-naming text."""
-    from pathvalidate import sanitize_filename  # зависимость piper-tts (только dev)
-
-    return f"{sanitize_filename(text.strip())}.wav"
-
-
 def run_piper(job: SynthJob, texts: Sequence[str], voices_dir: Path, out_dir: Path) -> dict:
-    """Озвучить тексты одним запуском Piper. Возвращает {текст: путь к WAV 16 кГц}."""
-    names = [piper_file_name(t) for t in texts]
-    if len(set(names)) != len(names):
-        raise ValueError("тексты дают одинаковые имена файлов Piper")
+    """Озвучить тексты одним запуском Piper. Возвращает {текст: путь к WAV 16 кГц}.
+
+    Файлы Piper именуются по времени (--output-dir-naming timestamp) и сопоставляются с
+    текстами по порядку: Piper пишет их строго по строкам входа. Имена «по тексту» не
+    годятся — на Linux длинная кириллическая фраза даёт имя длиннее 255 байт.
+    """
+    texts = [t.strip() for t in texts]
+    if any(not t or "\n" in t for t in texts) or len(set(texts)) != len(texts):
+        raise ValueError("тексты должны быть непустыми, однострочными и без повторов")
     out_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        (tmp / "in.txt").write_text("\n".join(t.strip() for t in texts) + "\n")
+        (tmp / "in.txt").write_text("\n".join(texts) + "\n", encoding="utf-8")
         model = voices_dir / f"{job.voice}.onnx"
-        subprocess.run(
+        proc = subprocess.run(
             [sys.executable, "-m", "piper", "-m", str(model), "-c", f"{model}.json",
-             "-i", str(tmp / "in.txt"), "-d", str(tmp / "wav"), "--output-dir-naming", "text",
+             "-i", str(tmp / "in.txt"), "-d", str(tmp / "wav"),
+             "--output-dir-naming", "timestamp",
              "-s", str(job.speaker_id), "--length-scale", str(job.length_scale),
              "--noise-scale", str(job.noise_scale), "--noise-w-scale", str(job.noise_w_scale)],
-            check=True, capture_output=True,
+            capture_output=True, text=True,
         )
+        if proc.returncode != 0:
+            raise RuntimeError(f"Piper ({job}) завершился с кодом {proc.returncode}:\n"
+                               f"{proc.stderr[-2000:]}")
+        wavs = sorted((tmp / "wav").glob("*.wav"), key=lambda p: int(p.stem))
+        if len(wavs) != len(texts):
+            raise RuntimeError(f"Piper записал {len(wavs)} файлов на {len(texts)} фраз")
         result = {}
-        for text, name in zip(texts, names, strict=True):
-            audio, sr = sf.read(str(tmp / "wav" / name), dtype="float32")
+        for text, wav in zip(texts, wavs, strict=True):
+            audio, sr = sf.read(str(wav), dtype="float32")
             if sr != SAMPLE_RATE:
                 audio = librosa.resample(audio, orig_sr=sr, target_sr=SAMPLE_RATE)
             digest = hashlib.sha1(f"{job}|{text}".encode()).hexdigest()[:12]

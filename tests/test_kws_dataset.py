@@ -63,3 +63,32 @@ def test_run_piper_maps_texts_to_16k_files(tmp_path):
     long, short = (sf.info(str(files[t])).duration for t in ("Скорая помощь.", "На помощь!"))
     assert long > short
     assert isinstance(files["На помощь!"], Path)
+
+
+@needs_voice
+def test_run_piper_long_cyrillic_text_and_order(tmp_path):
+    # Упало в Colab: имя файла «по тексту» > 255 байт на Linux. Теперь имена от текста не зависят.
+    long_text = ("Начальник полиции заявил, что обвиняемые были представлены перед судом "
+                 "и что расследование продолжается в соответствии с законом республики.")
+    assert len(long_text.encode()) > 255
+    texts = ["Раз.", long_text, "Два три четыре пять шесть."]
+    job = SynthJob("ru_RU-denis-medium", 0, 1.0, 0.667, 0.8)
+
+    files = run_piper(job, texts, VOICES, tmp_path)
+
+    d = {t: sf.info(str(files[t])).duration for t in texts}
+    assert d["Раз."] < d["Два три четыре пять шесть."] < d[long_text]  # порядок не перепутан
+
+
+@needs_voice
+def test_run_piper_reports_piper_error(tmp_path):
+    job = SynthJob("no-such-voice", 0, 1.0, 0.667, 0.8)
+    with pytest.raises(RuntimeError, match="Piper"):
+        run_piper(job, ["Раз."], VOICES, tmp_path)
+
+
+def test_run_piper_rejects_bad_texts(tmp_path):
+    job = SynthJob("ru_RU-denis-medium", 0, 1.0, 0.667, 0.8)
+    for bad in (["Раз.", "Раз."], ["", "Два."], ["a\nb"]):
+        with pytest.raises(ValueError):
+            run_piper(job, bad, VOICES, tmp_path)
