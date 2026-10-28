@@ -4,6 +4,7 @@
 |---|---|---|---|---|
 | `vosk-model-small-ru-0.22` | русский | 46 236 750 байт | `961d5ff98a17f4aa6de69864d0aa71fa5bac682301d2b5d17a3f24c5c99a46d4` | Apache 2.0 |
 | `vosk-model-small-kz-0.42` | казахский | 59 697 294 байт | `b6d6bfe6195c866805bd18b1f56723e4d2ba4866e81df1481006d0c5704fda4f` | Apache 2.0 |
+| `vosk-model-small-en-us-0.15` | английский (только для проверки на клипах «help» из FSD50K) | 41 205 931 байт | `30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498` | Apache 2.0 |
 
 Источник — сайт авторов Vosk (Alpha Cephei): https://alphacephei.com/vosk/models.
 На Hugging Face у авторов (`alphacep`) казахской модели нет, а русские там — другого
