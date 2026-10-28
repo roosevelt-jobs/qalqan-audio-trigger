@@ -62,6 +62,16 @@ const conn = document.getElementById("conn");
 const cards = new Map();  // event_id -> {el, seenAt}
 
 const DECISION_TEXT = { confirmed: "Подтверждено", rejected: "Отклонено" };
+const DETECTOR_TEXT = {
+  asr_keywords: "кодовая фраза (C)",
+  sed_panns: "крик (B)",
+  energy: "громкость (заглушка)",
+};
+
+function detectorText(name) {
+  // несколько детекторов в одной тревоге — через «+»
+  return name.split("+").map(n => DETECTOR_TEXT[n] || n).join(" + ");
+}
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -88,7 +98,7 @@ function render(ev, isLive) {
   card.replaceChildren();
 
   const head = el("div", "row");
-  head.append(el("span", "title", "Тревога: " + ev.detector));
+  head.append(el("span", "title", "Тревога: " + detectorText(ev.detector)));
   head.append(el("span", "meta", new Date(ev.timestamp_utc).toLocaleTimeString("ru-RU")));
   head.append(el("span", "meta",
     "уверенность " + ev.score.toFixed(2) + " (порог " + ev.threshold.toFixed(2) + ")"));

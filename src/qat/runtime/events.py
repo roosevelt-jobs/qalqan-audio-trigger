@@ -3,11 +3,16 @@
 Событие выдаётся в два этапа (согласовано для S6, чтобы тревога не ждала «+5 с»):
 1. on_trigger — сразу при срабатывании: JSON с полями клипа = null.
 2. poll / flush — когда хвост клипа записан: тот же event_id, клип, хеш и фактические смещения.
+
+Несколько детекторов («любой из двух», согласовано в S14a): срабатывание другого детектора
+в пределах merge_window_sec от ожидающей тревоги присоединяется к ней — то же событие
+выдаётся снова, detector = "c+b" (через «+», в порядке списка детекторов), score — максимум.
 """
 
 import hashlib
 import json
 import uuid
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,6 +24,8 @@ from qat.runtime.postproc import Trigger
 from qat.runtime.ring_buffer import RingBuffer
 
 EVENTS_DIR = Path(__file__).resolve().parents[3] / "events"
+# ASSUMPTION: срабатывания разных детекторов ближе 3 с — одна ситуация (согласовано в S14a).
+MERGE_WINDOW_SEC = 3.0
 
 
 @dataclass(frozen=True)
@@ -49,33 +56,64 @@ class EventWriter:
 
     def __init__(
         self,
-        detector: Detector,
+        detector: Detector | Sequence[Detector],
         buffer: RingBuffer,
         events_dir: str | Path = EVENTS_DIR,
         clip_before_sec: float = 5.0,
         clip_after_sec: float = 5.0,
+        merge_window_sec: float = 0.0,
     ):
-        self.detector = detector
+        self.detectors = list(detector) if isinstance(detector, Sequence) else [detector]
+        self.detector = self.detectors[0]
         self.buffer = buffer
         self.events_dir = Path(events_dir)
         self.events_dir.mkdir(parents=True, exist_ok=True)
         self.before = round(clip_before_sec * buffer.sample_rate)
         self.after = round(clip_after_sec * buffer.sample_rate)
+        self.merge = round(merge_window_sec * buffer.sample_rate)
         self._pending: list[tuple[AlarmEvent, int]] = []
+        # event_id -> {имя детектора: (версия, оценка, порог)}
+        self._members: dict[str, dict[str, tuple[str, float, float]]] = {}
 
-    def on_trigger(self, trigger: Trigger) -> AlarmEvent:
-        """Этап 1: событие без клипа, сразу."""
-        event = AlarmEvent(
-            event_id=str(uuid.uuid4()),
-            timestamp_utc=datetime.now(UTC).isoformat(),
-            detector=self.detector.name,
-            detector_version=self.detector.version,
-            score=trigger.score,
-            threshold=trigger.threshold,
+    def on_trigger(self, trigger: Trigger, detector: Detector | None = None) -> AlarmEvent | None:
+        """Этап 1: событие без клипа, сразу. Если это срабатывание присоединилось к уже
+        ожидающей тревоге — обновлённое событие; если его детектор там уже есть — None."""
+        det = detector or self.detector
+        for i, (event, center) in enumerate(self._pending):
+            if abs(trigger.sample - center) <= self.merge and self.merge > 0:
+                members = self._members[event.event_id]
+                if det.name in members:
+                    return None
+                members[det.name] = (det.version, trigger.score, trigger.threshold)
+                updated = self._compose(event, members)
+                self._pending[i] = (updated, center)
+                self._write_json(updated)
+                return updated
+        members = {det.name: (det.version, trigger.score, trigger.threshold)}
+        event = self._compose(
+            AlarmEvent(
+                event_id=str(uuid.uuid4()),
+                timestamp_utc=datetime.now(UTC).isoformat(),
+                detector="", detector_version="", score=0.0, threshold=0.0,
+            ),
+            members,
         )
+        self._members[event.event_id] = members
         self._write_json(event)
         self._pending.append((event, trigger.sample))
         return event
+
+    def _compose(self, event: AlarmEvent, members: dict[str, tuple[str, float, float]]):
+        order = [d.name for d in self.detectors]
+        names = sorted(members, key=lambda n: order.index(n) if n in order else len(order))
+        best = max(names, key=lambda n: members[n][1])
+        return replace(
+            event,
+            detector="+".join(names),
+            detector_version="+".join(members[n][0] for n in names),
+            score=members[best][1],
+            threshold=members[best][2],
+        )
 
     def poll(self) -> list[AlarmEvent]:
         """Этап 2 для событий, у которых хвост клипа уже записан в буфер."""
@@ -90,6 +128,7 @@ class EventWriter:
 
     def _finalize(self, event: AlarmEvent, center: int, end: int) -> AlarmEvent:
         self._pending = [p for p in self._pending if p[0].event_id != event.event_id]
+        self._members.pop(event.event_id, None)
         oldest, _ = self.buffer.available_range()
         # Клип не дополняется тишиной: начало обрезается до доступного, смещения — фактические.
         start = max(center - self.before, oldest)

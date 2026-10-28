@@ -24,12 +24,16 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from qat.detectors.registry import DETECTORS, make_detector
+from qat.detectors.registry import (
+    DETECTORS,
+    make_detector,
+    make_postproc,
+    parse_detector_list,
+)
 from qat.logging_setup import setup_logging
 from qat.runtime.audio_io import AudioSource, MicrophoneSource, WavReplaySource
-from qat.runtime.events import EVENTS_DIR, EventWriter
-from qat.runtime.pipeline import run_events
-from qat.runtime.postproc import PostProcessor
+from qat.runtime.events import EVENTS_DIR, MERGE_WINDOW_SEC, EventWriter
+from qat.runtime.pipeline import run_events_multi
 from qat.runtime.ring_buffer import RingBuffer
 from qat.runtime.wake import Wake
 
@@ -124,23 +128,24 @@ def _realtime(source: AudioSource) -> Iterator:
 def _run_pipeline(
     make_source: Callable[[], AudioSource],
     realtime: bool,
-    threshold: float,
+    threshold: float | None,
     events_dir: Path,
     hub: Hub,
     loop: asyncio.AbstractEventLoop,
     stop: threading.Event,
-    detector_name: str = "energy",
+    detector_names: str = "energy",
 ) -> None:
     try:
-        detector = make_detector(detector_name)
+        detectors = [make_detector(n) for n in parse_detector_list(detector_names)]
         buffer = RingBuffer()
-        hop = round(detector.hop_sec * buffer.sample_rate)
-        postproc = PostProcessor(hop, threshold=threshold)
-        writer = EventWriter(detector, buffer, events_dir)
+        postprocs = [make_postproc(d, buffer.sample_rate, threshold) for d in detectors]
+        writer = EventWriter(detectors, buffer, events_dir, merge_window_sec=MERGE_WINDOW_SEC)
         source = make_source()
         # Микрофон — контекстный менеджер (открывает поток), replay — нет.
         ctx = source if hasattr(source, "__enter__") else nullcontext(source)
-        logger.info("конвейер запущен, детектор %s %s", detector.name, detector.version)
+        logger.info("конвейер запущен, детекторы: %s",
+                    ", ".join(f"{d.name} {d.version} (порог {p.threshold})"
+                              for d, p in zip(detectors, postprocs, strict=True)))
         with ctx as src:
             blocks = _realtime(src) if realtime else src
 
@@ -150,7 +155,8 @@ def _run_pipeline(
                         return
                     yield block
 
-            for event in run_events(until_stopped(), detector, Wake(), buffer, postproc, writer):
+            events = run_events_multi(until_stopped(), detectors, Wake(), buffer, postprocs, writer)
+            for event in events:
                 # Ждём доставки, чтобы этапы события не перепутались местами.
                 asyncio.run_coroutine_threadsafe(hub.publish(event.to_json()), loop).result()
         logger.info("конвейер остановлен")
@@ -161,10 +167,11 @@ def _run_pipeline(
 def create_app(
     make_source: Callable[[], AudioSource] | None = None,
     realtime: bool = False,
-    threshold: float = 0.8,
+    threshold: float | None = None,
     events_dir: str | Path = EVENTS_DIR,
     detector: str = "energy",
 ) -> FastAPI:
+    """detector — имя или список через запятую; threshold=None — пороги из реестра."""
     events_dir = Path(events_dir)
     events_dir.mkdir(parents=True, exist_ok=True)
     hub = Hub(events_dir)
@@ -224,9 +231,11 @@ def _main() -> None:
     src = parser.add_mutually_exclusive_group(required=True)
     src.add_argument("--mic", action="store_true", help="микрофон")
     src.add_argument("--wav", help="replay WAV-файла (16 кГц)")
-    parser.add_argument("--detector", choices=sorted(DETECTORS), default="energy")
+    parser.add_argument("--detector", default="energy",
+                        help=f"имя или список через запятую: {', '.join(sorted(DETECTORS))}")
     parser.add_argument("--realtime", action="store_true", help="replay в темпе реального времени")
-    parser.add_argument("--threshold", type=float, default=0.8)
+    parser.add_argument("--threshold", type=float, default=None,
+                        help="один порог для всех детекторов (по умолчанию — из реестра)")
     parser.add_argument("--events-dir", default=str(EVENTS_DIR))
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)

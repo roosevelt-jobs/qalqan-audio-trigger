@@ -20,7 +20,7 @@ import numpy as np
 import soundfile as sf
 
 from qat.detectors.base import Detector
-from qat.detectors.registry import DETECTORS, make_detector
+from qat.detectors.registry import CONFIGS, DETECTORS, make_detector
 from qat.eval.metrics import HIT_TOLERANCE_AFTER_SEC, ScoredFile, det_curve, threshold_at_fa
 from qat.logging_setup import setup_logging
 from qat.runtime.audio_io import SAMPLE_RATE, WavReplaySource
@@ -97,7 +97,8 @@ def evaluate(
     pos = [score_file(i, detector, vad) for i in positives]
     neg = [score_file(i, detector, vad) for i in negatives]
     hop = round(detector.hop_sec * SAMPLE_RATE)
-    det = det_curve(pos, neg, thresholds, hop, SAMPLE_RATE, tolerance_after_sec)
+    postproc = CONFIGS[detector.name].postproc if detector.name in CONFIGS else {}
+    det = det_curve(pos, neg, thresholds, hop, SAMPLE_RATE, tolerance_after_sec, **postproc)
     op = threshold_at_fa(det, TARGET_FA_PER_HOUR)
 
     neg_hours = det[0].negative_hours
@@ -114,6 +115,7 @@ def evaluate(
         "detector": detector.name,
         "detector_version": detector.version,
         "use_wake": use_wake,
+        "postproc": postproc,
         "tolerance_after_sec": tolerance_after_sec,
         "positives": len(positives),
         "negatives": len(negatives),

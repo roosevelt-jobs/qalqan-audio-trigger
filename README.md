@@ -326,3 +326,29 @@ uv run python -m qat.eval.tuning tune --manifest data/processed/fsd50k_eval/mani
 ```bash
 uv run pytest tests/test_eval_tuning.py
 ```
+
+## S14a: детекторы B и C параллельно
+
+Конвейер (`run_events_multi`) запускает несколько детекторов на общем источнике, буфере и
+пробуждении; у каждого своя сетка окон, постобработка и порог (`detectors/registry.py`).
+Тревога — от любого детектора; срабатывания ближе 3 с сливаются в одно событие
+(`detector` = `"asr_keywords+sed_panns"`, см. CLAUDE.md раздел 3). Кодовые фразы C по умолчанию —
+«на помощь» и «көмектесіңдер».
+
+| Детектор | Порог | Постобработка |
+|---|---|---|
+| `asr_keywords` (C) | 0,5 | без сглаживания, 1 окно |
+| `sed_panns` (B) | 0,15 | сглаживание 3, 2 подряд |
+
+```bash
+uv run python -m server.app --mic --detector asr_keywords,sed_panns
+```
+
+`--threshold` задаёт один порог для всех детекторов вместо порогов из реестра.
+
+Известное ограничение: тихий визг (ниже −20 dBFS) пробуждение не пропускает — Silero VAD не
+считает его речью, и B его не видит (на стенде так 16% криков).
+
+```bash
+uv run pytest tests/test_fusion.py
+```
