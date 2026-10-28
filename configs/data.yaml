@@ -1,0 +1,77 @@
+# Данные для модели A (KWS). CLAUDE.md, раздел 7: пути и версии датасетов — здесь.
+kws:
+  out_dir: data/processed/kws
+  seed: 0
+
+  # Кодовые фразы (S14a) — то, что модель должна ловить.
+  phrases:
+    ru: ["на помощь"]
+    kk: ["көмектесіңдер"]
+
+  # Тексты для синтеза позитивов.
+  positive_texts:
+    ru: ["На помощь!", "на помощь", "На помощь! На помощь!"]
+    kk: ["Көмектесіңдер!", "көмектесіңдер", "Көмектесіңдер! Көмектесіңдер!"]
+
+  # Трудные негативы: похоже по смыслу или звучанию, но не тревога.
+  # TODO(verify): казахские фразы проверить носителем языка.
+  hard_negative_texts:
+    ru:
+      - "Скорая помощь."
+      - "Вызовите скорую помощь."
+      - "Помощь нужна?"
+      - "Нужна помощь?"
+      - "Помогите мне поднять."
+      - "Помощь уже едет."
+      - "Помогите, пожалуйста, пройти."
+      - "Спасибо за помощь."
+    kk:
+      - "Көмек керек пе?"
+      - "Мен көмектесемін."
+      - "Жедел жәрдем."
+      - "Көмегіңізге рахмет."
+      - "Көмектесіп жіберші."
+      - "Көмек келе жатыр."
+
+  # Обычная синтетическая речь (теми же голосами): предложения из расшифровок FLEURS.
+  negative_sentences:
+    source: data/census/fleurs  # google/fleurs@70bb2e84b976b7e960aa89f1c648e09c59f894dd, *.tsv
+    per_voice: 20
+
+  # Голоса Piper: rhasspy/piper-voices@5041a7a49ae5b3a0f30e6837769eb03fdbb231bd
+  voices_dir: models/piper
+  # speakers: id диктора в модели -> человек (из speaker_id_map в .onnx.json).
+  # iseke/raya x_low — те же люди, что дикторы 1 и 3 в issai: отложенный человек
+  # убирается из обучения во всех моделях сразу.
+  voices:
+    - {name: kk_KZ-issai-high, lang: kk, license: CC-BY-4.0,
+       speakers: {0: kk_M2, 1: kk_Iseke, 2: kk_F3, 3: kk_Raya, 4: kk_F1, 5: kk_F2}}
+    - {name: kk_KZ-iseke-x_low, lang: kk, license: CC-BY-4.0, speakers: {0: kk_Iseke}}
+    - {name: kk_KZ-raya-x_low, lang: kk, license: CC-BY-4.0, speakers: {0: kk_Raya}}
+    - {name: ru_RU-denis-medium, lang: ru, license: CC0, speakers: {0: ru_denis}}
+    - {name: ru_RU-dmitri-medium, lang: ru, license: CC0, speakers: {0: ru_dmitri}}
+    - {name: ru_RU-ruslan-medium, lang: ru, license: CC-BY-NC-SA-4.0, research_only: true,
+       speakers: {0: ru_ruslan}}
+  # Люди, целиком отложенные для проверки при обучении (validation), — не в train.
+  val_speakers: [kk_Raya, ru_dmitri]
+
+  # Вариации интонации Piper (length_scale — темп, noise_scale — вариативность звучания).
+  prosody:
+    length_scale: [0.85, 1.0, 1.2]
+    noise_scale: [0.4, 0.667, 0.9]
+    noise_w_scale: 0.8
+
+  # Живые негативы.
+  kscd:  # issai/kazakh-speech-commands, MIT
+    archive: data/kscd/data.zip
+    val_speaker_fraction: 0.1
+  fsd50k:  # уже подготовленный FSD50K eval 16 кГц (S11a)
+    clips_dir: data/processed/fsd50k_eval
+    manifest: data/processed/fsd50k_eval/manifest_sed_neg3000_seed0.jsonl
+    negatives_as_clips: 600  # речь и звуки — негативы
+    val_group_fraction: 0.1
+
+  # Короткий путь ради демо (решение пользователя): меньше копий, один прогон.
+  augment:
+    copies_positive: 6
+    copies_negative: 1

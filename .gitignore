@@ -16,3 +16,7 @@ models/panns/*.part
 # Модели Vosk (~100 МБ) не коммитим: скачиваются отдельно, см. models/vosk/README.md
 models/vosk/*/
 models/vosk/*.zip*
+
+# Голоса Piper (~375 МБ) не коммитим: скачиваются отдельно, см. models/piper/README.md
+models/piper/*.onnx
+models/piper/*.onnx.json
