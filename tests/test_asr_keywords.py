@@ -1,4 +1,4 @@
-"""Детектор C. Фразы — голоса macOS (Milena — RU, Aru — KK), только для юнит-тестов.
+"""Детектор C. Фразы — голоса macOS (Samantha — EN, Milena — RU, Aru — KK), только для юнит-тестов.
 
 Ключевые слова здесь тестовые, не итоговый список проекта.
 """
@@ -23,7 +23,7 @@ from qat.runtime.ring_buffer import RingBuffer
 from qat.runtime.wake import Wake
 
 DATA = Path(__file__).parent / "data"
-TEST_KEYWORDS = {"ru": ["помогите"], "kk": ["көмектесіңдер"]}
+TEST_KEYWORDS = {"en": ["help"], "ru": ["помогите"], "kk": ["көмектесіңдер"]}
 needs_models = pytest.mark.skipif(
     not all(p.is_dir() for p in MODEL_PATHS.values()),
     reason="нет моделей Vosk, см. models/vosk/README.md",
@@ -67,13 +67,13 @@ def test_matches_protocol(detector):
 
 
 @needs_models
-@pytest.mark.parametrize("lang", ["ru", "kk"])
+@pytest.mark.parametrize("lang", ["en", "ru", "kk"])
 def test_keyword_detected(detector, lang):
     assert max_score(detector, f"asr_{lang}_kw.wav") >= 0.9
 
 
 @needs_models
-@pytest.mark.parametrize("lang", ["ru", "kk"])
+@pytest.mark.parametrize("lang", ["en", "ru", "kk"])
 def test_neutral_speech_not_detected(detector, lang):
     assert max_score(detector, f"asr_{lang}_neutral.wav") == 0.0
 
@@ -84,6 +84,12 @@ def test_keyword_only_for_its_language():
     ru_only = AsrKeywordsDetector({"ru": ["помогите"]})
     assert max_score(ru_only, "asr_kk_kw.wav") == 0.0
     assert max_score(ru_only, "asr_ru_kw.wav") >= 0.9
+
+
+@needs_models
+def test_trap_phrase_with_keyword_triggers(detector):
+    # Известное ограничение детектора C (docs/progress.md): он реагирует на слово, а не на смысл.
+    assert max_score(detector, "asr_en_trap.wav") >= 0.9
 
 
 @needs_models

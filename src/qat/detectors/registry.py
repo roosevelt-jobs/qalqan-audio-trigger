@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 
 from qat.detectors.base import Detector
 
-# Кодовые фразы детектора C по умолчанию (выбраны в S14a, CLAUDE.md раздел 4.2).
-DEFAULT_KEYWORDS = {"ru": ["на помощь"], "kk": ["көмектесіңдер"]}
+# Кодовые фразы детектора C по умолчанию (S15: английский «help»; до этого RU/KK, см. git).
+DEFAULT_KEYWORDS = {"en": ["help"]}
 
 
 @dataclass(frozen=True)

@@ -129,9 +129,10 @@ def test_default_keywords_end_to_end(tmp_path):
                                [make_postproc(c, SR)], writer)
         return [e for e in evs if e.clip_ready]
 
-    assert len(alarms("asr_ru_napomosh.wav")) == 1  # «На помощь! На помощь!»
-    assert alarms("asr_ru_kw.wav") == []  # «Помогите!» больше не кодовая фраза
-    assert len(alarms("asr_kk_kw.wav")) == 1  # «Көмектесіңдер!»
+    assert len(alarms("asr_en_kw.wav")) == 1  # «Help! Help, please!»
+    assert alarms("asr_en_neutral.wav") == []
+    assert alarms("asr_ru_kw.wav") == []  # русский больше не кодовая фраза (S15)
+    assert alarms("asr_kk_kw.wav") == []
 
 
 @needs_vosk
@@ -141,7 +142,7 @@ def test_two_detectors_one_alarm(tmp_path):
     writer = EventWriter([c, e], buf, tmp_path / "ev", merge_window_sec=MERGE_WINDOW_SEC)
     pps = [make_postproc(c, SR), make_postproc(e, SR, threshold=0.6)]
 
-    events = list(run_events_multi(WavReplaySource(DATA / "asr_ru_napomosh.wav"), [c, e],
+    events = list(run_events_multi(WavReplaySource(DATA / "asr_en_kw.wav"), [c, e],
                                    Wake(), buf, pps, writer))
 
     final = [x for x in events if x.clip_ready]

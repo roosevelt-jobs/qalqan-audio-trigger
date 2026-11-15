@@ -235,8 +235,9 @@ uv run pytest tests/test_sed_panns.py
 
 ## S10: детектор C (ASR + ключевые слова)
 
-`src/qat/detectors/asr_keywords.py` — `AsrKeywordsDetector`: два потоковых распознавателя Vosk
-(русский `small-ru-0.22`, казахский `small-kz-0.42`) с полным словарём и поиск ключевых фраз в
+`src/qat/detectors/asr_keywords.py` — `AsrKeywordsDetector`: потоковые распознаватели Vosk
+(английский `small-en-us-0.15` — основной для MVP, S15; русский `small-ru-0.22`, казахский
+`small-kz-0.42` — в коде остаются) с полным словарём и поиск ключевых фраз в
 распознанном тексте. Окно = шаг = 0,25 с. Оценка: уверенность Vosk для финального результата,
 1,0 — если фраза есть в промежуточном тексте. Распознанный текст никуда не пишется.
 
@@ -244,13 +245,13 @@ uv run pytest tests/test_sed_panns.py
 реестр (`--detector`) ещё не добавлен:
 
 ```python
-AsrKeywordsDetector({"ru": ["помогите"], "kk": ["көмектесіңдер"]})
+AsrKeywordsDetector({"en": ["help"]})
 ```
 
 Для постобработки нужны `smooth_windows=1, consecutive=1` (`RECOMMENDED_POSTPROC`): оценка — одиночный
 всплеск. Модели (~190 МБ распакованными) в git не входят, см. `models/vosk/README.md`.
 
-Юнит-тесты на фразах голосами macOS (Milena, Aru), без моделей пропускаются:
+Юнит-тесты на фразах голосами macOS (Samantha, Milena, Aru); EN-файлы `asr_en_*.wav` — `say -v Samantha -o x.wav --data-format=LEI16@16000 "Help! Help, please!"` и 2 с тишины по краям, без моделей пропускаются:
 
 ```bash
 uv run pytest tests/test_asr_keywords.py
@@ -332,8 +333,8 @@ uv run pytest tests/test_eval_tuning.py
 Конвейер (`run_events_multi`) запускает несколько детекторов на общем источнике, буфере и
 пробуждении; у каждого своя сетка окон, постобработка и порог (`detectors/registry.py`).
 Тревога — от любого детектора; срабатывания ближе 3 с сливаются в одно событие
-(`detector` = `"asr_keywords+sed_panns"`, см. CLAUDE.md раздел 3). Кодовые фразы C по умолчанию —
-«на помощь» и «көмектесіңдер».
+(`detector` = `"asr_keywords+sed_panns"`, см. CLAUDE.md раздел 3). Кодовая фраза C по умолчанию —
+«help» (S15; раньше «на помощь» и «көмектесіңдер»).
 
 | Детектор | Порог | Постобработка | Пробуждение |
 |---|---|---|---|

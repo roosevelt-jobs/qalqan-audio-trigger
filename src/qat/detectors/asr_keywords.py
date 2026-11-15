@@ -1,4 +1,4 @@
-"""Детектор C: распознавание речи (Vosk, RU + KK) и поиск ключевых слов в распознанном тексте.
+"""Детектор C: распознавание речи (Vosk, EN; RU/KK тоже) и поиск ключевых слов в тексте.
 
 Распознаватели работают потоком: окно = шагу, каждому окну подаётся только новый звук.
 Оценка окна:
@@ -26,6 +26,7 @@ from qat.runtime.audio_io import SAMPLE_RATE
 
 VOSK_DIR = Path(__file__).resolve().parents[3] / "models" / "vosk"
 MODEL_PATHS = {
+    "en": VOSK_DIR / "vosk-model-small-en-us-0.15",
     "ru": VOSK_DIR / "vosk-model-small-ru-0.22",
     "kk": VOSK_DIR / "vosk-model-small-kz-0.42",
 }
