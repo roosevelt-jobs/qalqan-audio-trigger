@@ -138,6 +138,8 @@ PROFILES = {
     "detectors": ["panns", "vosk", "vosk_en"],
     # S15: для A на английском — только EN-голоса/тексты; RU/KK-группы (piper, fleurs, vosk) — отдельно.
     "kws": ["vosk_en", "piper_en", "kscd", "fleurs_en", "fsd50k"],
+    # kws без FSD50K: когда готовые клипы восстановлены из архива на Диске (notebooks/colab_en.ipynb)
+    "kws_core": ["vosk_en", "piper_en", "kscd", "fleurs_en"],
     "all": ["panns", "vosk", "vosk_en", "piper", "piper_en", "kscd", "fleurs", "fleurs_en",
             "fsd50k"],
 }
@@ -241,15 +243,30 @@ def prepare_fsd50k(negatives: int = 3000, seed: int = 0) -> Path:
     return manifest
 
 
+def fetch_fsd50k_ground_truth(root: Path = ROOT) -> Path:
+    """Только разметка FSD50K (335 КБ, md5): её читает сборка набора; клипы не нужны."""
+    target = root / "data/fsd50k/extracted/FSD50K.ground_truth"
+    if (target / "eval.csv").is_file():
+        return target
+    (asset,) = [a for a in ASSETS if a.dest.endswith("FSD50K.ground_truth.zip")]
+    fetch([asset], root=root)
+    with zipfile.ZipFile(root / asset.dest) as z:
+        z.extractall(root / "data/fsd50k/extracted")
+    return target
+
+
 def _main() -> None:
     parser = argparse.ArgumentParser(description="Загрузка моделей и данных с проверкой хешей")
-    parser.add_argument("action", choices=["fetch", "list", "prepare-fsd50k"])
+    parser.add_argument("action", choices=["fetch", "list", "prepare-fsd50k", "fetch-fsd-gt"])
     parser.add_argument("--profile", choices=sorted(PROFILES), default="kws")
     parser.add_argument("--max-gb", type=float, default=None, help="не качать больше этого")
     args = parser.parse_args()
     assets = select(args.profile)
     if args.action == "prepare-fsd50k":
         prepare_fsd50k()
+        return
+    if args.action == "fetch-fsd-gt":
+        print(fetch_fsd50k_ground_truth())
         return
     if args.action == "list":
         for a in assets:

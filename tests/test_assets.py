@@ -72,3 +72,14 @@ def test_colab_notebook_is_valid_json():
     assert nb["nbformat"] == 4
     sources = "".join("".join(c["source"]) for c in nb["cells"])
     assert "colab_setup.sh" in sources and "kws_dataset synth" in sources
+
+
+def test_kws_core_profile_skips_fsd50k_and_ground_truth_asset_exists():
+    assert "fsd50k" not in {a.group for a in select("kws_core")}
+    assert any(a.dest.endswith("FSD50K.ground_truth.zip") for a in ASSETS)
+
+
+def test_resume_notebook_is_valid_json():
+    nb = json.loads((ROOT / "notebooks" / "colab_en.ipynb").read_text())
+    sources = "".join("".join(c["source"]) for c in nb["cells"])
+    assert "prepared.tar" in sources and "kws_core" in sources and "fetch-fsd-gt" in sources
