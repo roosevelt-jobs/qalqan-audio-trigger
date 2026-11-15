@@ -34,7 +34,7 @@ kws:
   # Обычная синтетическая речь (теми же голосами): предложения из расшифровок FLEURS.
   negative_sentences:
     source: data/census/fleurs  # google/fleurs@70bb2e84b976b7e960aa89f1c648e09c59f894dd, *.tsv
-    per_voice: 20
+    per_voice: 10  # S15: было 20, ради времени синтеза в Colab
 
   # Голоса Piper: rhasspy/piper-voices@5041a7a49ae5b3a0f30e6837769eb03fdbb231bd
   voices_dir: models/piper
@@ -53,7 +53,7 @@ kws:
   # Вариации интонации Piper (length_scale — темп, noise_scale — вариативность звучания).
   prosody:
     length_scale: [0.85, 1.0, 1.2]
-    noise_scale: [0.4, 0.667, 0.9]
+    noise_scale: [0.667]  # S15: было [0.4, 0.667, 0.9]; Colab на 2 ядрах — ~2,3 мин на запуск
     noise_w_scale: 0.8
 
   # Живые негативы.
