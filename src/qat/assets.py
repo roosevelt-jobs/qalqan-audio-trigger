@@ -39,11 +39,12 @@ class Asset:
     unzip_to: str | None = None  # распаковать архив сюда и удалить архив
 
 
-def _piper(path: str, size: int, sha: str, json_sha: str, json_size: int) -> list[Asset]:
+def _piper(path: str, size: int, sha: str, json_sha: str, json_size: int,
+           group: str = "piper") -> list[Asset]:
     name = path.rsplit("/", 1)[-1]
     return [
-        Asset("piper", f"{PIPER}/{path}.onnx", f"models/piper/{name}.onnx", size, sha),
-        Asset("piper", f"{PIPER}/{path}.onnx.json", f"models/piper/{name}.onnx.json",
+        Asset(group, f"{PIPER}/{path}.onnx", f"models/piper/{name}.onnx", size, sha),
+        Asset(group, f"{PIPER}/{path}.onnx.json", f"models/piper/{name}.onnx.json",
               json_size, json_sha),
     ]
 
@@ -60,6 +61,11 @@ ASSETS: list[Asset] = [
           unzip_to="models/vosk"),
     Asset("vosk", f"{VOSK}/vosk-model-small-kz-0.42.zip", "models/vosk/vosk-model-small-kz-0.42.zip",
           59697294, "b6d6bfe6195c866805bd18b1f56723e4d2ba4866e81df1481006d0c5704fda4f",
+          unzip_to="models/vosk"),
+    # Vosk EN (S15: основной язык MVP).
+    Asset("vosk_en", f"{VOSK}/vosk-model-small-en-us-0.15.zip",
+          "models/vosk/vosk-model-small-en-us-0.15.zip", 41205931,
+          "30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498",
           unzip_to="models/vosk"),
     # Голоса Piper (синтез обучающих данных для A).
     *_piper("kk/kk_KZ/issai/high/kk_KZ-issai-high", 127864258,
@@ -80,6 +86,23 @@ ASSETS: list[Asset] = [
     *_piper("ru/ru_RU/ruslan/medium/ru_RU-ruslan-medium", 63201294,
             "72a5f88e0b20928064eb45d88e1daa21f8af62d18613580d32cbb4aed48dcf7f",
             "706a4fb17bc304abd07809b552deae615e64dcbffbfbd09854ba37ca59e88117", 4882),
+    # Голоса Piper EN (S15). libritts-high — 904 диктора (CC BY 4.0); john/kristin/bryce —
+    # общественное достояние, joe — CC0 (см. MODEL_CARD каждого голоса).
+    *_piper("en/en_US/libritts/high/en_US-libritts-high", 136673811,
+            "9127a559e11603f10b366d1a20ac7426826081dbc521de4c2420c57728d73f0f",
+            "2efdc6d7f954588b8180132cbd9b8001933fdd00932c92bc92fd0d2028a9eb3d", 20163, "piper_en"),
+    *_piper("en/en_US/john/medium/en_US-john-medium", 63531379,
+            "789c6c875726e627ddee93d51d8727859abe9c091c3d141591f4b83c2072e988",
+            "af60f177b6b550f3d7a302720c0fb89e7f94a82b5dca464775ef63b1c69ba09a", 4965, "piper_en"),
+    *_piper("en/en_US/kristin/medium/en_US-kristin-medium", 63531379,
+            "5849957f929cbf720c258f8458692d6103fff2f0e3d3b19c8259474bb06a18d4",
+            "5681426d4aead22195de70531eeeeddb46493cfaffc5764b2ea3db73428b651c", 4968, "piper_en"),
+    *_piper("en/en_US/bryce/medium/en_US-bryce-medium", 63531379,
+            "dc9caa6c313199ffb5ac698b6e542fa6cba388aeaf2731e25262e33b9810aef1",
+            "7ceb1bc4af6d4e41b6d1edbb86c67e91e01eaa71f66db4cd0ae92ac704d415be", 4966, "piper_en"),
+    *_piper("en/en_US/joe/medium/en_US-joe-medium", 63201294,
+            "58afce0321b8d9c46d7cdf9c16500cc55a793b4220212dba6b70fb788b3baf06",
+            "3d6d5410b3795cb1950595247ef8f06190719e6fdbfa3a2356d8ec368e1aad33", 4794, "piper_en"),
     # Kazakh Speech Commands (живые негативы для A).
     Asset("kscd", f"{KSCD}/data.zip", "data/kscd/data.zip", 75445212,
           "323aa13a2856ae7c012dd0a16bd9bd9139d66591f4058351e50fdf475144a3b9",
@@ -94,6 +117,12 @@ ASSETS: list[Asset] = [
         ("kk_kz", "dev", 312534, "24195834bd3720cbbb4c57cd6e6ce51e8335b15239054995b8f3c31b69f4293c"),
         ("kk_kz", "test", 787758, "16b40d7a3c0a3be482f3bea949d3297ccdd13e42042683ffd298f8b6e469508a"),
     ]],
+    *[Asset("fleurs_en", f"{FLEURS}/{lang}/{split}.tsv", f"data/census/fleurs/{lang}_{split}.tsv",
+            size, sha) for lang, split, size, sha in [
+        ("en_us", "train", 1414907, "3ccfc83672cc03a835143e325abb38b4163e3a21725bc1a7d1165bc309b95852"),
+        ("en_us", "dev", 213065, "9d57ee7e91e9d4c92edb39f6bbea668ef8dc2a3ff96eb510d5580b2ad05d17ec"),
+        ("en_us", "test", 367864, "74c046239374deeb60fa63f258f907388093a32bcaa3140965f70ef05c79f7ca"),
+    ]],
     # FSD50K eval (тест B; шумы и негативы для A). md5 — из записи Zenodo.
     *[Asset("fsd50k", f"{ZENODO_FSD50K}/{name}?download=1", f"data/fsd50k/raw/{name}", size,
             md5=md5) for name, size, md5 in [
@@ -106,9 +135,11 @@ ASSETS: list[Asset] = [
 ]
 
 PROFILES = {
-    "detectors": ["panns", "vosk"],
-    "kws": ["vosk", "piper", "kscd", "fleurs", "fsd50k"],
-    "all": ["panns", "vosk", "piper", "kscd", "fleurs", "fsd50k"],
+    "detectors": ["panns", "vosk", "vosk_en"],
+    # S15: для A на английском — только EN-голоса/тексты; RU/KK-группы (piper, fleurs, vosk) — отдельно.
+    "kws": ["vosk_en", "piper_en", "kscd", "fleurs_en", "fsd50k"],
+    "all": ["panns", "vosk", "vosk_en", "piper", "piper_en", "kscd", "fleurs", "fleurs_en",
+            "fsd50k"],
 }
 
 

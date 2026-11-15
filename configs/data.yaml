@@ -3,35 +3,33 @@ kws:
   out_dir: data/processed/kws
   seed: 0
 
-  # Кодовые фразы (S14a) — то, что модель должна ловить.
+  # Кодовые фразы (S15: MVP на английском; RU/KK — см. историю git, коммит f3bd75d).
   phrases:
-    ru: ["на помощь"]
-    kk: ["көмектесіңдер"]
+    en: ["help"]
 
   # Тексты для синтеза позитивов.
   positive_texts:
-    ru: ["На помощь!", "на помощь", "На помощь! На помощь!"]
-    kk: ["Көмектесіңдер!", "көмектесіңдер", "Көмектесіңдер! Көмектесіңдер!"]
+    en: ["Help!", "help", "Help! Help!", "Help, help!"]
 
-  # Трудные негативы: похоже по смыслу или звучанию, но не тревога.
-  # TODO(verify): казахские фразы проверить носителем языка.
+  # Трудные негативы: звучат похоже на «help», но это другие слова.
+  # ASSUMPTION: фразы со словом «help» внутри предложения («Thanks for the help») НЕ берём в
+  # негативы: на окне ~1 с они акустически неотличимы от позитива, и метки противоречили бы
+  # друг другу. Это ограничение A и C — различать контекст должен оператор.
+  # Синтез проверяется Vosk: негатив, распознанный как «help», отбраковывается.
   hard_negative_texts:
-    ru:
-      - "Скорая помощь."
-      - "Вызовите скорую помощь."
-      - "Помощь нужна?"
-      - "Нужна помощь?"
-      - "Помогите мне поднять."
-      - "Помощь уже едет."
-      - "Помогите, пожалуйста, пройти."
-      - "Спасибо за помощь."
-    kk:
-      - "Көмек керек пе?"
-      - "Мен көмектесемін."
-      - "Жедел жәрдем."
-      - "Көмегіңізге рахмет."
-      - "Көмектесіп жіберші."
-      - "Көмек келе жатыр."
+    en:
+      - "Yelp!"
+      - "Hello!"
+      - "Hell no."
+      - "Whelp, that's that."
+      - "The kelp is on the shelf."
+      - "Put on your helmet."
+      - "Health and safety."
+      - "He held it."
+      - "Yell if you need me."
+      - "Hold on!"
+      - "Hey, over here!"
+      - "Hello, how are you?"
 
   # Обычная синтетическая речь (теми же голосами): предложения из расшифровок FLEURS.
   negative_sentences:
@@ -41,19 +39,16 @@ kws:
   # Голоса Piper: rhasspy/piper-voices@5041a7a49ae5b3a0f30e6837769eb03fdbb231bd
   voices_dir: models/piper
   # speakers: id диктора в модели -> человек (из speaker_id_map в .onnx.json).
-  # iseke/raya x_low — те же люди, что дикторы 1 и 3 в issai: отложенный человек
-  # убирается из обучения во всех моделях сразу.
+  # libritts-high: 20 из 904 дикторов (каждый 45-й по индексу), чтобы не привыкнуть к 3–4 голосам.
   voices:
-    - {name: kk_KZ-issai-high, lang: kk, license: CC-BY-4.0,
-       speakers: {0: kk_M2, 1: kk_Iseke, 2: kk_F3, 3: kk_Raya, 4: kk_F1, 5: kk_F2}}
-    - {name: kk_KZ-iseke-x_low, lang: kk, license: CC-BY-4.0, speakers: {0: kk_Iseke}}
-    - {name: kk_KZ-raya-x_low, lang: kk, license: CC-BY-4.0, speakers: {0: kk_Raya}}
-    - {name: ru_RU-denis-medium, lang: ru, license: CC0, speakers: {0: ru_denis}}
-    - {name: ru_RU-dmitri-medium, lang: ru, license: CC0, speakers: {0: ru_dmitri}}
-    - {name: ru_RU-ruslan-medium, lang: ru, license: CC-BY-NC-SA-4.0, research_only: true,
-       speakers: {0: ru_ruslan}}
+    - {name: en_US-libritts-high, lang: en, license: CC-BY-4.0,
+       speakers: {0: lt_p3922, 45: lt_p534, 90: lt_p6694, 135: lt_p8527, 180: lt_p1509, 225: lt_p6098, 270: lt_p3032, 315: lt_p7959, 360: lt_p5519, 405: lt_p8138, 450: lt_p7384, 495: lt_p3289, 540: lt_p3221, 585: lt_p6167, 630: lt_p5115, 675: lt_p4057, 720: lt_p1160, 765: lt_p1668, 810: lt_p3790, 855: lt_p4236}}
+    - {name: en_US-john-medium, lang: en, license: public-domain, speakers: {0: en_john}}
+    - {name: en_US-kristin-medium, lang: en, license: public-domain, speakers: {0: en_kristin}}
+    - {name: en_US-bryce-medium, lang: en, license: public-domain, speakers: {0: en_bryce}}
+    - {name: en_US-joe-medium, lang: en, license: CC0, speakers: {0: en_joe}}
   # Люди, целиком отложенные для проверки при обучении (validation), — не в train.
-  val_speakers: [kk_Raya, ru_dmitri]
+  val_speakers: [lt_p3922, lt_p6098, lt_p7384, lt_p4057, en_joe]
 
   # Вариации интонации Piper (length_scale — темп, noise_scale — вариативность звучания).
   prosody:

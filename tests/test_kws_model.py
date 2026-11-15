@@ -41,22 +41,21 @@ def test_crop_positive_offset_range():
 
 
 def test_model_under_size_limit():
-    n = sum(p.numel() for p in DSCNN(3).parameters())
+    n = sum(p.numel() for p in DSCNN(2).parameters())
     assert n * 4 < 1_000_000  # < 1 МБ float32 (CLAUDE.md, раздел 6)
 
 
 def make_toy(root, n=60):
-    """«ru» — тон 600 Гц, «kk» — 1500 Гц, негативы — шум. Валидация — отдельные seed."""
+    """«en» — тон 600 Гц, негативы — шум. Валидация — отдельные seed."""
     rng = np.random.default_rng(0)
     t = np.arange(SR) / SR
     rows = []
     for i in range(n):
-        for kind in ("ru", "kk", "neg"):
+        for kind in ("en", "neg"):
             if kind == "neg":
                 x = rng.normal(0, 0.1, SR)
             else:
-                f = 600 if kind == "ru" else 1500
-                x = 0.5 * np.sin(2 * np.pi * f * t + rng.uniform(0, 6)) + rng.normal(0, 0.02, SR)
+                x = 0.5 * np.sin(2 * np.pi * 600 * t + rng.uniform(0, 6)) + rng.normal(0, 0.02, SR)
             p = root / f"{kind}_{i}.wav"
             sf.write(str(p), x.astype(np.float32), SR)
             rows.append({"path": p.name, "label": "negative" if kind == "neg" else "positive",
@@ -93,7 +92,7 @@ def test_detector_uses_trained_model(toy_model):
     assert isinstance(det, Detector) and det.name == "kws"
     assert det.process(tone) > 0.5
     assert det.process(noise) < 0.5
-    assert det.class_probs(tone).argmax() == 1  # класс «ru»
+    assert det.class_probs(tone).argmax() == 1  # класс «help»
 
 
 def test_detector_requires_model(tmp_path):

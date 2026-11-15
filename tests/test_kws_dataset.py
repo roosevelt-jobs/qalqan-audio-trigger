@@ -19,6 +19,8 @@ def test_contains_phrase():
     assert not contains_phrase("скорая помощь", ["на помощь"])
     assert not contains_phrase("помощь на", ["на помощь"])  # порядок слов важен
     assert contains_phrase("көмектесіңдер", ["көмектесіңдер"])
+    assert contains_phrase("oh help me", ["help"])
+    assert not contains_phrase("yelp helmet helpful", ["help"])  # только целое слово
 
 
 def test_config_val_speakers_are_people_present_in_voices():
@@ -26,7 +28,7 @@ def test_config_val_speakers_are_people_present_in_voices():
     people = {p for v in cfg["voices"] for p in v["speakers"].values()}
     assert set(cfg["val_speakers"]) <= people
     # для каждого языка в обучении остаются люди
-    for lang in ("ru", "kk"):
+    for lang in {v["lang"] for v in cfg["voices"]}:
         lang_people = {p for v in cfg["voices"] if v["lang"] == lang
                        for p in v["speakers"].values()}
         assert lang_people - set(cfg["val_speakers"])

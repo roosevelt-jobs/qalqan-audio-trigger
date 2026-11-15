@@ -120,7 +120,6 @@ def evaluate(model: nn.Module, X: torch.Tensor, y: torch.Tensor, threshold: floa
     out["negative_fpr_at_threshold"] = float((score[neg] >= threshold).float().mean())
     pos = y > 0
     out["positive_recall_at_threshold"] = float((score[pos] >= threshold).float().mean())
-    out["ru_kk_confusion"] = int(((pred == 2) & (y == 1)).sum() + ((pred == 1) & (y == 2)).sum())
     recalls = [v for k, v in out.items() if k.startswith("recall_") and v is not None]
     out["macro_recall"] = float(np.mean(recalls))
     return out
@@ -146,8 +145,8 @@ def train(cfg: dict, root: Path = ROOT, epochs: int | None = None) -> dict:
         X, y, is_val = build_features(rows, cfg, root)
         np.savez(cache, X=X, y=y, is_val=is_val)
     print(f"примеров {len(y)} (val {int(is_val.sum())}), по классам: "
-          f"{np.bincount(y[~is_val], minlength=3).tolist()} train / "
-          f"{np.bincount(y[is_val], minlength=3).tolist()} val", flush=True)
+          f"{np.bincount(y[~is_val], minlength=len(cfg['classes'])).tolist()} train / "
+          f"{np.bincount(y[is_val], minlength=len(cfg['classes'])).tolist()} val", flush=True)
 
     device = pick_device()
     Xt, yt = torch.from_numpy(X[~is_val]), torch.from_numpy(y[~is_val])
@@ -184,8 +183,9 @@ def train(cfg: dict, root: Path = ROOT, epochs: int | None = None) -> dict:
         history.append({"epoch": epoch, "train_loss": total / len(yt), **val})
         print(f"эпоха {epoch:2d}: loss {total / len(yt):.3f}, val: фраз выше порога "
               f"{val['positive_recall_at_threshold']:.3f}, негативов выше порога "
-              f"{val['negative_fpr_at_threshold']:.4f}, ru {val['recall_1']}, "
-              f"kk {val['recall_2']}", flush=True)
+              f"{val['negative_fpr_at_threshold']:.4f}, "
+              f"recall по классам {[val.get(f'recall_{c}') for c in range(len(cfg['classes']))]}",
+              flush=True)
         # при равенстве — более поздняя эпоха (скорость обучения уже снижена)
         if best is None or val["detection_score"] >= best["detection_score"]:
             best = {"epoch": epoch, **val}

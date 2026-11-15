@@ -4,8 +4,8 @@ kws:
   out_dir: models/kws
   name: kws_dscnn_v1
   seed: 0
-  classes: [other, na_pomosh, komektesinder]   # индекс 1 — ru, 2 — kk
-  class_of_lang: {ru: 1, kk: 2}
+  classes: [other, help]   # S15: один позитивный класс — английское «help»
+  class_of_lang: {en: 1}
   # ASSUMPTION: позитив сдвигается в окне на 0–0,5 с — детектор видит фразу в разных местах окна.
   positive_max_offset_sec: 0.5
   model: {channels: 64, blocks: 4}

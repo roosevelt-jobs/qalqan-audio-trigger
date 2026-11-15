@@ -22,7 +22,7 @@ def test_registry_is_consistent():
 
 
 def test_every_configured_voice_has_assets():
-    voices = {Path(a.dest).name for a in ASSETS if a.group == "piper"}
+    voices = {Path(a.dest).name for a in ASSETS if a.group.startswith("piper")}
     for v in load_config()["voices"]:
         assert f"{v['name']}.onnx" in voices and f"{v['name']}.onnx.json" in voices
 
@@ -62,7 +62,8 @@ def test_is_present_for_unzipped_assets(tmp_path):
 
 def test_profiles_cover_what_steps_need():
     kws = {a.group for a in select("kws")}
-    assert {"piper", "vosk", "kscd", "fleurs", "fsd50k"} <= kws
+    assert {"piper_en", "vosk_en", "kscd", "fleurs_en", "fsd50k"} <= kws
+    assert not kws & {"piper", "fleurs", "vosk"}  # RU/KK не нужны для A на английском
     assert {"panns", "vosk"} <= {a.group for a in select("detectors")}
 
 

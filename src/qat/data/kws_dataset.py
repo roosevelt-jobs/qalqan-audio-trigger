@@ -31,7 +31,7 @@ from qat.runtime.audio_io import SAMPLE_RATE
 
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG = ROOT / "configs" / "data.yaml"
-FLEURS_LANG = {"ru": "ru_ru", "kk": "kk_kz"}
+FLEURS_LANG = {"en": "en_us", "ru": "ru_ru", "kk": "kk_kz"}
 
 
 def load_config(path: Path = CONFIG) -> dict:
@@ -73,6 +73,8 @@ class VoskCheck:
         self.models = {lang: vosk.Model(str(MODEL_PATHS[lang])) for lang in langs}
 
     def text(self, lang: str, path: Path) -> str:
+        if lang not in self.models:  # модель языка голоса загружается при первом обращении
+            self.models[lang] = self._vosk.Model(str(MODEL_PATHS[lang]))
         audio, _ = sf.read(str(path), dtype="int16")
         rec = self._vosk.KaldiRecognizer(self.models[lang], SAMPLE_RATE)
         rec.AcceptWaveform(audio.tobytes())
@@ -87,7 +89,7 @@ def _synth_job(args) -> list[dict]:
     global _WORKER_VOSK
     voice, spk, person, ls, ns, nw, texts, phrases, voices_dir, out = args
     if _WORKER_VOSK is None:
-        _WORKER_VOSK = VoskCheck(["ru", "kk"])
+        _WORKER_VOSK = VoskCheck([])
     lang = voice["lang"]
     job = SynthJob(voice["name"], int(spk), ls, ns, nw)
     files = run_piper(job, [t for t, _ in texts], voices_dir, out / "tts" / person)
